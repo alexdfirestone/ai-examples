@@ -11,7 +11,7 @@ import { generateSnippets } from "./steps/generate-snippets";
 // import { humanApproval } from "./steps/human-approval"; // Commented out for now
 import { persistProfile } from "./steps/persist";
 import { notifyTeams } from "./steps/notify";
-import { streamWorkflowUpdates } from "./steps/stream-update";
+import { writeStreamUpdate } from "./steps/stream-writer";
 
 /**
  * Main workflow orchestrator for resume review process
@@ -35,78 +35,84 @@ export async function reviewCandidateProfile(
 
   try {
     // Send initial update
-    await streamWorkflowUpdates(writable, [
-      { step: "workflow", status: "started", data: { candidateId: input.candidateId } }
-    ]);
+    await writeStreamUpdate(writable, { 
+      step: "workflow", 
+      status: "started", 
+      data: { candidateId: input.candidateId },
+      timestamp: Date.now()
+    });
 
     // 1) Validate input
-    await streamWorkflowUpdates(writable, [{ step: "validate", status: "running" }]);
+    await writeStreamUpdate(writable, { step: "validate", status: "running", timestamp: Date.now() });
     const normalized = await validateInput(input);
-    await streamWorkflowUpdates(writable, [{ step: "validate", status: "completed" }]);
+    await writeStreamUpdate(writable, { step: "validate", status: "completed", timestamp: Date.now() });
 
     // 2) Ingest raw sources (mocked for POC)
-    await streamWorkflowUpdates(writable, [{ step: "ingest", status: "running" }]);
+    await writeStreamUpdate(writable, { step: "ingest", status: "running", timestamp: Date.now() });
     const raw = await ingestSources(normalized);
-    await streamWorkflowUpdates(writable, [{ 
+    await writeStreamUpdate(writable, { 
       step: "ingest", 
       status: "completed", 
       data: { 
         hasResume: !!raw.resumeText,
         hasLinkedIn: !!raw.linkedInHtml,
         hasGitHub: !!raw.githubReadme
-      }
-    }]);
+      },
+      timestamp: Date.now()
+    });
 
     // 3) Extract and normalize text
-    await streamWorkflowUpdates(writable, [{ step: "extract", status: "running" }]);
+    await writeStreamUpdate(writable, { step: "extract", status: "running", timestamp: Date.now() });
     const extracted = await extractAndNormalize(raw);
-    await streamWorkflowUpdates(writable, [{ 
+    await writeStreamUpdate(writable, { 
       step: "extract", 
       status: "completed", 
-      data: { tokens: extracted.tokens }
-    }]);
+      data: { tokens: extracted.tokens },
+      timestamp: Date.now()
+    });
 
     // 4) Agent enriches, scores, and identifies gaps
-    await streamWorkflowUpdates(writable, [{ step: "agent-enrich", status: "running" }]);
+    await writeStreamUpdate(writable, { step: "agent-enrich", status: "running", timestamp: Date.now() });
     const enriched = await agentEnrichProfile({
       extracted,
       jobContext: normalized.jobContext,
     });
-    await streamWorkflowUpdates(writable, [{ 
+    await writeStreamUpdate(writable, { 
       step: "agent-enrich", 
       status: "completed", 
       data: { 
         score: enriched.overallScore,
         gaps: enriched.gaps.length,
         riskFlags: enriched.riskFlags.length
-      }
-    }]);
+      },
+      timestamp: Date.now()
+    });
 
     // 5) Generate recruiter-facing snippets
-    await streamWorkflowUpdates(writable, [{ step: "generate-snippets", status: "running" }]);
+    await writeStreamUpdate(writable, { step: "generate-snippets", status: "running", timestamp: Date.now() });
     const snippets = await generateSnippets(enriched);
-    await streamWorkflowUpdates(writable, [{ step: "generate-snippets", status: "completed" }]);
+    await writeStreamUpdate(writable, { step: "generate-snippets", status: "completed", timestamp: Date.now() });
 
     // 6) Human-in-the-loop approval (COMMENTED OUT FOR NOW)
     const approval = { approved: true, reason: "auto_approved" };
 
     // 7) Persist profile to database
-    await streamWorkflowUpdates(writable, [{ step: "persist", status: "running" }]);
+    await writeStreamUpdate(writable, { step: "persist", status: "running", timestamp: Date.now() });
     await persistProfile({
       enriched,
       snippets,
       approved: approval.approved,
       candidateId: normalized.candidateId,
     });
-    await streamWorkflowUpdates(writable, [{ step: "persist", status: "completed" }]);
+    await writeStreamUpdate(writable, { step: "persist", status: "completed", timestamp: Date.now() });
 
     // 8) Notify downstream teams
-    await streamWorkflowUpdates(writable, [{ step: "notify", status: "running" }]);
+    await writeStreamUpdate(writable, { step: "notify", status: "running", timestamp: Date.now() });
     await notifyTeams({
       candidateId: normalized.candidateId,
       approved: approval.approved,
     });
-    await streamWorkflowUpdates(writable, [{ step: "notify", status: "completed" }]);
+    await writeStreamUpdate(writable, { step: "notify", status: "completed", timestamp: Date.now() });
 
     const result: WorkflowResult = {
       status: "completed",
@@ -116,16 +122,17 @@ export async function reviewCandidateProfile(
       snippets,
     };
 
-    await streamWorkflowUpdates(writable, [{ step: "workflow", status: "completed", data: result }]);
+    await writeStreamUpdate(writable, { step: "workflow", status: "completed", data: result, timestamp: Date.now() });
 
     return result;
   } catch (error) {
     console.error(`[workflow] Error processing candidate:`, error);
-    await streamWorkflowUpdates(writable, [{ 
+    await writeStreamUpdate(writable, { 
       step: "workflow", 
       status: "error", 
-      data: { message: error instanceof Error ? error.message : "Unknown error" }
-    }]);
+      data: { message: error instanceof Error ? error.message : "Unknown error" },
+      timestamp: Date.now()
+    });
 
     return {
       status: "failed",
