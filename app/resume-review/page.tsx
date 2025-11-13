@@ -11,8 +11,14 @@ import type {
 
 interface WorkflowStep {
   name: string;
-  status: "pending" | "running" | "completed" | "error";
+  status: "pending" | "running" | "completed" | "error" | "waiting";
   message?: string;
+  webhookUrl?: string;
+  approvalData?: {
+    candidateId: string;
+    snippets: any;
+    score: number;
+  };
   toolCalls?: Array<{
     name: string;
     description: string;
@@ -31,7 +37,7 @@ export default function ResumeReviewPage() {
     { name: "Extract & Normalize Text", status: "pending" },
     { name: "AI Profile Enrichment", status: "pending" },
     { name: "Generate Snippets", status: "pending" },
-    { name: "Human Approval", status: "pending" },
+    { name: "Human Approval", status: "pending" as const },
     { name: "Persist Profile", status: "pending" },
     { name: "Notify Teams", status: "pending" },
   ]);
@@ -54,8 +60,9 @@ export default function ResumeReviewPage() {
     extract: 2,
     "agent-enrich": 3,
     "generate-snippets": 4,
-    persist: 5,
-    notify: 6,
+    "human-approval": 5,
+    persist: 6,
+    notify: 7,
   };
 
   const handleSubmit = async (input: CandidateInput) => {
@@ -70,6 +77,7 @@ export default function ResumeReviewPage() {
       { name: "Extract & Normalize Text", status: "pending" },
       { name: "AI Profile Enrichment", status: "pending" },
       { name: "Generate Snippets", status: "pending" },
+      { name: "Human Approval", status: "pending" },
       { name: "Persist Profile", status: "pending" },
       { name: "Notify Teams", status: "pending" },
     ]);
@@ -122,6 +130,26 @@ export default function ResumeReviewPage() {
 
               if (status === "running") {
                 updateStepStatus(stepIndex, "running");
+              } else if (status === "waiting") {
+                // Handle waiting state (for human approval)
+                setSteps((prev) =>
+                  prev.map((s, i) =>
+                    i === stepIndex
+                      ? {
+                          ...s,
+                          status: "waiting",
+                          webhookUrl: data?.webhookUrl,
+                          approvalData: data
+                            ? {
+                                candidateId: data.candidateId,
+                                snippets: data.snippets,
+                                score: data.score,
+                              }
+                            : undefined,
+                        }
+                      : s
+                  )
+                );
               } else if (status === "tool-call") {
                 // Update tool calls for this step
                 setSteps((prev) =>
@@ -205,6 +233,7 @@ export default function ResumeReviewPage() {
       { name: "Extract & Normalize Text", status: "pending" },
       { name: "AI Profile Enrichment", status: "pending" },
       { name: "Generate Snippets", status: "pending" },
+      { name: "Human Approval", status: "pending" },
       { name: "Persist Profile", status: "pending" },
       { name: "Notify Teams", status: "pending" },
     ]);
@@ -214,7 +243,7 @@ export default function ResumeReviewPage() {
     {
       id: "resume-review",
       name: "Resume Review",
-      description: "AI-powered candidate evaluation",
+      description: "Demo 1",
     },
   ];
 

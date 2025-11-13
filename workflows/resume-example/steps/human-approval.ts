@@ -6,12 +6,11 @@ export async function humanApproval(payload: {
   enriched: EnrichedProfile;
   snippets: Snippets;
   candidateId: string;
-  webhookUrl?: string;
 }): Promise<ApprovalResult> {
   "use step";
 
   // In mock mode, auto-approve immediately
-  const useMock = process.env.MOCK_NOTIFICATIONS !== "false";
+  const useMock = process.env.MOCK_NOTIFICATIONS === "true";
   
   if (useMock) {
     console.log(
@@ -21,10 +20,7 @@ export async function humanApproval(payload: {
     return { approved: true, reason: "mock_auto_approve" };
   }
 
-  // Real implementation would:
-  // 1. Send notification with webhook URL (passed from workflow)
-  // 2. Wait for webhook response or timeout
-  // For now, just auto-approve
-  return { approved: true, reason: "auto_approve" };
+  // Real approval logic handled in workflow
+  return { approved: true, reason: "human_approval" };
 }
 

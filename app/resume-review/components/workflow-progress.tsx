@@ -4,8 +4,14 @@ import { useState, useEffect } from "react";
 
 interface WorkflowStep {
   name: string;
-  status: "pending" | "running" | "completed" | "error";
+  status: "pending" | "running" | "completed" | "error" | "waiting";
   message?: string;
+  webhookUrl?: string;
+  approvalData?: {
+    candidateId: string;
+    snippets: any;
+    score: number;
+  };
   toolCalls?: Array<{
     name: string;
     description: string;
@@ -20,6 +26,7 @@ interface WorkflowProgressProps {
 export function WorkflowProgress({ steps }: WorkflowProgressProps) {
   const [expandedSteps, setExpandedSteps] = useState<Set<number>>(new Set());
   const [visibleSteps, setVisibleSteps] = useState<number>(0);
+  const [approvingStep, setApprovingStep] = useState<number | null>(null);
 
   // Animate steps appearing one by one
   useEffect(() => {
@@ -71,6 +78,29 @@ export function WorkflowProgress({ steps }: WorkflowProgressProps) {
     });
   };
 
+  const handleApproval = async (index: number, approved: boolean) => {
+    const step = steps[index];
+    if (!step.webhookUrl) return;
+
+    setApprovingStep(index);
+
+    try {
+      await fetch(step.webhookUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          approved,
+          reason: approved ? "Approved by reviewer" : "Rejected by reviewer",
+        }),
+      });
+    } catch (error) {
+      console.error("Error sending approval:", error);
+      alert("Failed to send approval. Please try again.");
+    } finally {
+      setApprovingStep(null);
+    }
+  };
+
   return (
     <div className="relative">
       {/* Workflow Steps */}
@@ -98,6 +128,8 @@ export function WorkflowProgress({ steps }: WorkflowProgressProps) {
                         ? "border-white bg-white"
                 : step.status === "running"
                           ? "border-zinc-500 bg-zinc-900 animate-pulse"
+                  : step.status === "waiting"
+                            ? "border-zinc-500 bg-zinc-900 animate-pulse"
                   : step.status === "error"
                             ? "border-zinc-700 bg-zinc-800"
                             : "border-zinc-800 bg-black"
@@ -118,6 +150,8 @@ export function WorkflowProgress({ steps }: WorkflowProgressProps) {
                   />
                 </svg>
               ) : step.status === "running" ? (
+                      <div className="w-2 h-2 bg-white rounded-full animate-ping" />
+                    ) : step.status === "waiting" ? (
                       <div className="w-2 h-2 bg-white rounded-full animate-ping" />
                     ) : step.status === "error" ? (
                 <svg
@@ -159,6 +193,8 @@ export function WorkflowProgress({ steps }: WorkflowProgressProps) {
                           ? "text-white"
                       : step.status === "running"
                             ? "text-zinc-300"
+                        : step.status === "waiting"
+                              ? "text-zinc-300"
                         : step.status === "error"
                               ? "text-zinc-500"
                               : "text-zinc-700"
@@ -202,6 +238,43 @@ export function WorkflowProgress({ steps }: WorkflowProgressProps) {
                   {step.message}
                 </p>
               )}
+
+                  {/* Approval Buttons */}
+                  {step.status === "waiting" && step.webhookUrl && (
+                    <div className="mt-4 p-4 border border-zinc-800 bg-zinc-950/30 rounded animate-fadeIn">
+                      {step.approvalData && (
+                        <div className="mb-4 text-xs text-zinc-400">
+                          <p className="mb-1">
+                            <span className="text-zinc-500">Score:</span>{" "}
+                            <span className="text-white font-medium">
+                              {step.approvalData.score}/100
+                            </span>
+                          </p>
+                          {step.approvalData.snippets?.headline && (
+                            <p className="text-zinc-400 italic">
+                              "{step.approvalData.snippets.headline}"
+                            </p>
+                          )}
+                        </div>
+                      )}
+                      <div className="flex gap-3">
+                        <button
+                          onClick={() => handleApproval(index, true)}
+                          disabled={approvingStep === index}
+                          className="flex-1 px-4 py-2 bg-white text-black text-sm font-medium hover:bg-zinc-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          {approvingStep === index ? "Approving..." : "Approve"}
+                        </button>
+                        <button
+                          onClick={() => handleApproval(index, false)}
+                          disabled={approvingStep === index}
+                          className="flex-1 px-4 py-2 bg-zinc-900 text-white border border-zinc-700 text-sm font-medium hover:bg-zinc-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          {approvingStep === index ? "Rejecting..." : "Reject"}
+                        </button>
+                      </div>
+                    </div>
+                  )}
 
                   {/* Tool Calls */}
           {step.toolCalls && step.toolCalls.length > 0 && expandedSteps.has(index) && (

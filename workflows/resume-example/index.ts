@@ -1,14 +1,14 @@
 // Resume Review Workflow Orchestrator
 // Proof-of-concept for a resume-review product using Vercel Workflows
 
-import { getWritable } from "workflow";
+import { getWritable, createWebhook } from "workflow";
 import type { CandidateInput, WorkflowResult } from "./types";
 import { validateInput } from "./steps/validate";
 import { ingestSources } from "./steps/ingest";
 import { extractAndNormalize } from "./steps/extract";
 import { agentEnrichProfile } from "./steps/agent-enrich";
 import { generateSnippets } from "./steps/generate-snippets";
-// import { humanApproval } from "./steps/human-approval"; // Commented out for now
+import { humanApproval } from "./steps/human-approval";
 import { persistProfile } from "./steps/persist";
 import { notifyTeams } from "./steps/notify";
 import { writeStreamUpdate } from "./steps/stream-writer";
@@ -22,8 +22,9 @@ import { writeStreamUpdate } from "./steps/stream-writer";
  * 3. Extract and normalize text
  * 4. Agent enriches profile with AI and tools
  * 5. Generate recruiter-facing snippets
- * 6. Persist profile to database
- * 7. Notify downstream teams
+ * 6. Human approval (webhook-based, pauses workflow)
+ * 7. Persist profile to database
+ * 8. Notify downstream teams
  */
 export async function reviewCandidateProfile(
   input: CandidateInput
@@ -94,10 +95,91 @@ export async function reviewCandidateProfile(
     const snippets = await generateSnippets(enriched, writable);
     await writeStreamUpdate(writable, { step: "generate-snippets", status: "completed", timestamp: Date.now() });
 
-    // 6) Human-in-the-loop approval (COMMENTED OUT FOR NOW)
-    const approval = { approved: true, reason: "auto_approved" };
+    // 6) Human-in-the-loop approval
+    await writeStreamUpdate(writable, { step: "human-approval", status: "running", timestamp: Date.now() });
+    
+    // Check if we should use mock mode (auto-approve)
+    const useMock = process.env.MOCK_NOTIFICATIONS === "true";
+    let approval;
+    
+    if (useMock) {
+      // Mock mode: auto-approve
+      approval = await humanApproval({
+        enriched,
+        snippets,
+        candidateId: normalized.candidateId,
+      });
+      await writeStreamUpdate(writable, { 
+        step: "human-approval", 
+        status: "completed",
+        data: { approved: approval.approved, reason: approval.reason },
+        timestamp: Date.now() 
+      });
+    } else {
+      // Real mode: create webhook and wait for human approval
+      const webhook = createWebhook({
+        token: `approval:${normalized.candidateId}`,
+        respondWith: Response.json({ success: true }),
+      });
 
-    // 7) Persist profile to database
+      console.log(`[workflow] Waiting for approval at: ${webhook.url}`);
+      
+      // Send webhook URL to client
+      await writeStreamUpdate(writable, {
+        step: "human-approval",
+        status: "waiting",
+        data: {
+          webhookUrl: webhook.url,
+          candidateId: normalized.candidateId,
+          snippets: snippets,
+          score: enriched.overallScore,
+        },
+        timestamp: Date.now(),
+      });
+
+      // Wait for approval via webhook
+      const request = await webhook;
+      const approvalData = await request.json();
+      
+      approval = {
+        approved: approvalData.approved,
+        reason: approvalData.reason || (approvalData.approved ? "approved_by_human" : "rejected_by_human"),
+      };
+
+      console.log(
+        `[workflow] Received ${approval.approved ? "approval" : "rejection"} for ${normalized.candidateId}`
+      );
+
+      await writeStreamUpdate(writable, { 
+        step: "human-approval", 
+        status: "completed",
+        data: { approved: approval.approved, reason: approval.reason },
+        timestamp: Date.now() 
+      });
+    }
+
+    // Check if approval was rejected - end workflow early
+    if (!approval.approved) {
+      const result: WorkflowResult = {
+        status: "completed",
+        candidateId: normalized.candidateId,
+        approved: false,
+        enriched,
+        snippets,
+      };
+
+      await writeStreamUpdate(writable, { 
+        step: "workflow", 
+        status: "completed", 
+        data: { ...result, rejectionReason: approval.reason },
+        timestamp: Date.now() 
+      });
+
+      console.log(`[workflow] Ending workflow - candidate ${normalized.candidateId} was rejected`);
+      return result;
+    }
+
+    // 7) Persist profile to database (only if approved)
     await writeStreamUpdate(writable, { step: "persist", status: "running", timestamp: Date.now() });
     await persistProfile({
       enriched,
