@@ -117,19 +117,20 @@ export async function reviewCandidateProfile(
       });
     } else {
       // Real mode: create webhook and wait for human approval
+      const webhookToken = `approval:${normalized.candidateId}`;
       const webhook = createWebhook({
-        token: `approval:${normalized.candidateId}`,
+        token: webhookToken,
         respondWith: Response.json({ success: true }),
       });
 
-      console.log(`[workflow] Waiting for approval at: ${webhook.url}`);
+      console.log(`[workflow] Waiting for approval with token: ${webhookToken}`);
       
-      // Send webhook URL to client
+      // Send webhook token to client
       await writeStreamUpdate(writable, {
         step: "human-approval",
         status: "waiting",
         data: {
-          webhookUrl: webhook.url,
+          webhookToken: webhookToken,
           candidateId: normalized.candidateId,
           snippets: snippets,
           score: enriched.overallScore,
@@ -137,9 +138,8 @@ export async function reviewCandidateProfile(
         timestamp: Date.now(),
       });
 
-      // Wait for approval via webhook
-      const request = await webhook;
-      const approvalData = await request.json();
+      // Wait for approval via webhook (resumeHook sends data directly)
+      const approvalData = await webhook as unknown as { approved: boolean; reason: string };
       
       approval = {
         approved: approvalData.approved,
