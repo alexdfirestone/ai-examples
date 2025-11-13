@@ -43,6 +43,22 @@ export function WorkflowProgress({ steps }: WorkflowProgressProps) {
     }
   }, [steps, visibleSteps]);
 
+  // Auto-expand steps when they receive tool calls
+  useEffect(() => {
+    steps.forEach((step, index) => {
+      if (step.toolCalls && step.toolCalls.length > 0) {
+        setExpandedSteps((prev) => {
+          if (!prev.has(index)) {
+            const next = new Set(prev);
+            next.add(index);
+            return next;
+          }
+          return prev;
+        });
+      }
+    });
+  }, [steps]);
+
   const toggleStep = (index: number) => {
     setExpandedSteps((prev) => {
       const next = new Set(prev);

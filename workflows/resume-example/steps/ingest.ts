@@ -121,7 +121,7 @@ export async function ingestSources(
       toolChoice: { type: 'tool', toolName }, // Force this specific tool
       prompt: buildIngestionPrompt(input),
 
-      // Collect tool calls for batch update
+      // Stream tool calls as they happen, but send accumulated array
       onStepFinish: async (step) => {
         console.log(`[ingest] onStepFinish for ${toolName}:`, {
           hasToolCalls: !!step.toolCalls,
@@ -135,8 +135,19 @@ export async function ingestSources(
             timestamp: Date.now(),
           }));
           
-          // Collect tool calls instead of sending immediately
+          // Accumulate tool calls
           allToolCalls.push(...formattedCalls);
+          
+          // Send the accumulated array (so UI shows all tool calls so far)
+          if (writable) {
+            console.log(`[ingest] Streaming ${allToolCalls.length} total tool call(s) to UI`);
+            await writeStreamUpdate(writable, {
+              step: "ingest",
+              status: "tool-call",
+              data: { toolCalls: allToolCalls }, // Send ALL accumulated calls
+              timestamp: Date.now(),
+            });
+          }
         }
       },
     });
@@ -158,17 +169,6 @@ export async function ingestSources(
   console.log('[ingest] Calling fetchGitHub...');
   const githubResults = await callTool('fetchGitHub');
   allToolResults.push(...githubResults);
-
-  // Send all tool calls together in one update
-  if (writable && allToolCalls.length > 0) {
-    console.log(`[ingest] Sending ${allToolCalls.length} tool calls to UI`);
-    await writeStreamUpdate(writable, {
-      step: "ingest",
-      status: "tool-call",
-      data: { toolCalls: allToolCalls },
-      timestamp: Date.now(),
-    });
-  }
 
   console.log('[ingest] allToolResults:', JSON.stringify(allToolResults, null, 2));
   
