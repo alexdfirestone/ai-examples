@@ -85,17 +85,29 @@ export function WorkflowProgress({ steps }: WorkflowProgressProps) {
     setApprovingStep(index);
 
     try {
-      await fetch(step.webhookUrl, {
+      // Use our API proxy instead of calling webhook directly
+      const response = await fetch("/api/approval", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          webhookUrl: step.webhookUrl,
           approved,
           reason: approved ? "Approved by reviewer" : "Rejected by reviewer",
         }),
       });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to send approval");
+      }
+
+      const result = await response.json();
+      console.log("Approval sent successfully:", result);
     } catch (error) {
       console.error("Error sending approval:", error);
-      alert("Failed to send approval. Please try again.");
+      alert(
+        `Failed to send approval: ${error instanceof Error ? error.message : "Unknown error"}. Please try again.`
+      );
     } finally {
       setApprovingStep(null);
     }
