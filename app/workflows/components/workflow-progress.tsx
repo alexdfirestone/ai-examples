@@ -6,7 +6,7 @@ interface WorkflowStep {
   name: string;
   status: "pending" | "running" | "completed" | "error" | "waiting";
   message?: string;
-  webhookUrl?: string;
+  webhookToken?: string;
   approvalData?: {
     candidateId: string;
     snippets: any;
@@ -80,17 +80,17 @@ export function WorkflowProgress({ steps }: WorkflowProgressProps) {
 
   const handleApproval = async (index: number, approved: boolean) => {
     const step = steps[index];
-    if (!step.webhookUrl) return;
+    if (!step.webhookToken) return;
 
     setApprovingStep(index);
 
     try {
-      // Use our API proxy instead of calling webhook directly
+      // Use our API to resume the workflow hook
       const response = await fetch("/api/approval", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          webhookUrl: step.webhookUrl,
+          webhookToken: step.webhookToken,
           approved,
           reason: approved ? "Approved by reviewer" : "Rejected by reviewer",
         }),
@@ -252,7 +252,7 @@ export function WorkflowProgress({ steps }: WorkflowProgressProps) {
               )}
 
                   {/* Approval Buttons */}
-                  {step.status === "waiting" && step.webhookUrl && (
+                  {step.status === "waiting" && step.webhookToken && (
                     <div className="mt-4 p-4 border border-zinc-800 bg-zinc-950/30 rounded animate-fadeIn">
                       {step.approvalData && (
                         <div className="mb-4 text-xs text-zinc-400">

@@ -13,7 +13,7 @@ interface WorkflowStep {
   name: string;
   status: "pending" | "running" | "completed" | "error" | "waiting";
   message?: string;
-  webhookUrl?: string;
+  webhookToken?: string;
   approvalData?: {
     candidateId: string;
     snippets: any;
@@ -138,7 +138,7 @@ export default function WorkflowsPage() {
                       ? {
                           ...s,
                           status: "waiting",
-                          webhookUrl: data?.webhookUrl,
+                          webhookToken: data?.webhookToken,
                           approvalData: data
                             ? {
                                 candidateId: data.candidateId,

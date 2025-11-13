@@ -1,42 +1,31 @@
 import { NextResponse } from "next/server";
+import { resumeHook } from "workflow/api";
 
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { webhookUrl, approved, reason } = body;
+    const { webhookToken, approved, reason } = body;
 
-    if (!webhookUrl) {
+    if (!webhookToken) {
       return NextResponse.json(
-        { error: "webhookUrl is required" },
+        { error: "webhookToken is required" },
         { status: 400 }
       );
     }
 
-    console.log(`[approval] Forwarding approval to webhook: ${webhookUrl}`);
+    console.log(`[approval] Resuming workflow with token: ${webhookToken}`);
     console.log(`[approval] Approved: ${approved}, Reason: ${reason}`);
 
-    // Forward the approval to the webhook (server-to-server)
-    const response = await fetch(webhookUrl, {
-      method: "POST",
-      headers: { 
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ 
-        approved, 
-        reason 
-      }),
+    // Resume the workflow using the token
+    const result = await resumeHook(webhookToken, { 
+      approved, 
+      reason 
     });
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error(`[approval] Webhook error: ${response.status} ${errorText}`);
-      throw new Error(`Webhook request failed: ${response.statusText}`);
-    }
-
-    console.log(`[approval] Successfully sent approval to webhook`);
-    return NextResponse.json({ success: true });
+    console.log(`[approval] Successfully resumed workflow, runId: ${result.runId}`);
+    return NextResponse.json({ success: true, runId: result.runId });
   } catch (error) {
-    console.error("[approval] Error forwarding approval:", error);
+    console.error("[approval] Error resuming workflow:", error);
     return NextResponse.json(
       {
         error: error instanceof Error ? error.message : "Unknown error",
