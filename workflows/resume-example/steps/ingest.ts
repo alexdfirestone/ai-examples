@@ -109,67 +109,94 @@ export async function ingestSources(
     return { resumeText, linkedInHtml, githubReadme };
   }
 
-  // LLM-based tool calling approach
-  const result = await generateText({
-    model: 'openai/gpt-5-mini',
-    tools,
-    stopWhen: stepCountIs(3), // Stop after 5 steps to allow all tools to be called
-    prompt: buildIngestionPrompt(input),
+  // LLM-based tool calling approach - call each tool explicitly
+  const allToolResults = [];
+  const allToolCalls: ToolCall[] = [];
 
-    // Stream updates in real-time as tools are called
-    onStepFinish: async (step) => {
-      console.log('[ingest] onStepFinish called:', {
-        hasToolCalls: !!step.toolCalls,
-        toolCallCount: step.toolCalls?.length || 0,
-      });
-      
-      if (writable && step.toolCalls && step.toolCalls.length > 0) {
-        const formattedCalls: ToolCall[] = step.toolCalls.map((tc) => ({
-          name: tc.toolName,
-          description: `Called ${tc.toolName}`,
-          timestamp: Date.now(),
-        }));
+  // Helper function to call a specific tool and collect results
+  const callTool = async (toolName: 'fetchResume' | 'fetchLinkedIn' | 'fetchGitHub') => {
+    const result = await generateText({
+      model: 'openai/gpt-5-nano',
+      tools,
+      toolChoice: { type: 'tool', toolName }, // Force this specific tool
+      prompt: buildIngestionPrompt(input),
 
-        await writeStreamUpdate(writable, {
-          step: "ingest",
-          status: "tool-call",
-          data: { toolCalls: formattedCalls },
-          timestamp: Date.now(),
+      // Collect tool calls for batch update
+      onStepFinish: async (step) => {
+        console.log(`[ingest] onStepFinish for ${toolName}:`, {
+          hasToolCalls: !!step.toolCalls,
+          toolCallCount: step.toolCalls?.length || 0,
         });
-      }
-    },
-  });
+        
+        if (step.toolCalls && step.toolCalls.length > 0) {
+          const formattedCalls: ToolCall[] = step.toolCalls.map((tc) => ({
+            name: tc.toolName,
+            description: `Called ${tc.toolName}`,
+            timestamp: Date.now(),
+          }));
+          
+          // Collect tool calls instead of sending immediately
+          allToolCalls.push(...formattedCalls);
+        }
+      },
+    });
 
-  console.log('[ingest] generateText result keys:', Object.keys(result));
-  console.log('[ingest] result.text:', result.text);
-  console.log('[ingest] result.steps length:', result.steps?.length);
-  console.log('[ingest] result.toolResults:', result.toolResults);
-  
-  const { text, steps, toolResults } = result;
+    // Extract tool results from this call
+    const toolResults = result.steps.flatMap(step => step.toolResults || []);
+    return toolResults;
+  };
 
-  // Extract results from tool results array
-  console.log('[ingest] toolResults:', JSON.stringify(toolResults, null, 2));
+  // Call all three tools
+  console.log('[ingest] Calling fetchResume...');
+  const resumeResults = await callTool('fetchResume');
+  allToolResults.push(...resumeResults);
+
+  console.log('[ingest] Calling fetchLinkedIn...');
+  const linkedInResults = await callTool('fetchLinkedIn');
+  allToolResults.push(...linkedInResults);
+
+  console.log('[ingest] Calling fetchGitHub...');
+  const githubResults = await callTool('fetchGitHub');
+  allToolResults.push(...githubResults);
+
+  // Send all tool calls together in one update
+  if (writable && allToolCalls.length > 0) {
+    console.log(`[ingest] Sending ${allToolCalls.length} tool calls to UI`);
+    await writeStreamUpdate(writable, {
+      step: "ingest",
+      status: "tool-call",
+      data: { toolCalls: allToolCalls },
+      timestamp: Date.now(),
+    });
+  }
+
+  console.log('[ingest] allToolResults:', JSON.stringify(allToolResults, null, 2));
   
-  const resumeResult = toolResults.find(
+  const resumeResult = allToolResults.find(
     (tr) => tr.toolName === "fetchResume"
-  ) as { text?: string } | undefined;
+  );
 
-  const linkedInResult = toolResults.find(
+  const linkedInResult = allToolResults.find(
     (tr) => tr.toolName === "fetchLinkedIn"
-  ) as { html?: string } | undefined;
+  );
 
-  const githubResult = toolResults.find(
+  const githubResult = allToolResults.find(
     (tr) => tr.toolName === "fetchGitHub"
-  ) as { readme?: string } | undefined;
+  );
 
   console.log('[ingest] resumeResult:', resumeResult);
   console.log('[ingest] linkedInResult:', linkedInResult);
   console.log('[ingest] githubResult:', githubResult);
 
+  // Tool results contain the execute function return value in the 'output' property
+  const resumeData = resumeResult as any;
+  const linkedInData = linkedInResult as any;
+  const githubData = githubResult as any;
+
   return {
-    resumeText: resumeResult?.text,
-    linkedInHtml: linkedInResult?.html,
-    githubReadme: githubResult?.readme,
+    resumeText: resumeData?.output?.text,
+    linkedInHtml: linkedInData?.output?.html,
+    githubReadme: githubData?.output?.readme,
   };
 }
 
