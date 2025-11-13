@@ -48,7 +48,7 @@ MOCK_NOTIFICATIONS=true # Use mock notifications
 
 ## Frontend
 
-Navigate to `/resume-review` to access the UI:
+Navigate to `/workflows` to access the UI:
 
 - Upload resume or provide LinkedIn/GitHub URLs
 - "Auto-fill with Mock Data" button for quick testing
@@ -57,19 +57,22 @@ Navigate to `/resume-review` to access the UI:
 
 ## API Endpoint
 
-`POST /api/resume-review`
+`POST /api/workflows`
 
 **Request:**
 ```json
 {
-  "candidateId": "candidate-123",
-  "uploadUrl": "https://example.com/resume.pdf",
-  "linkedInUrl": "https://linkedin.com/in/user",
-  "githubUrl": "https://github.com/user",
-  "jobContext": {
-    "role": "Senior Full-Stack Engineer",
-    "seniority": "Senior",
-    "skills": ["TypeScript", "React", "Node.js"]
+  "workflow": "resume-review",
+  "input": {
+    "candidateId": "candidate-123",
+    "uploadUrl": "https://example.com/resume.pdf",
+    "linkedInUrl": "https://linkedin.com/in/user",
+    "githubUrl": "https://github.com/user",
+    "jobContext": {
+      "role": "Senior Full-Stack Engineer",
+      "seniority": "Senior",
+      "skills": ["TypeScript", "React", "Node.js"]
+    }
   }
 }
 ```
@@ -118,8 +121,8 @@ npm install
 # Run development server
 npm run dev
 
-# Visit the resume review page
-open http://localhost:3000/resume-review
+# Visit the workflows page
+open http://localhost:3000/workflows
 ```
 
 ## Testing

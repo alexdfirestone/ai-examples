@@ -205,7 +205,7 @@ export function WorkflowProgress({ steps }: WorkflowProgressProps) {
                 {step.toolCalls && step.toolCalls.length > 0 && (
                   <button
                     onClick={() => toggleStep(index)}
-                        className="ml-4 text-xs text-zinc-600 hover:text-zinc-400 flex items-center gap-1 font-mono transition-colors"
+                        className="ml-4 text-xs text-zinc-600 hover:text-zinc-400 flex items-center gap-1 font-mono transition-colors cursor-pointer"
                   >
                         {step.toolCalls.length} tool{step.toolCalls.length !== 1 ? "s" : ""}
                     <svg
@@ -261,14 +261,14 @@ export function WorkflowProgress({ steps }: WorkflowProgressProps) {
                         <button
                           onClick={() => handleApproval(index, true)}
                           disabled={approvingStep === index}
-                          className="flex-1 px-4 py-2 bg-white text-black text-sm font-medium hover:bg-zinc-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                          className="flex-1 px-4 py-2 bg-white text-black text-sm font-medium hover:bg-zinc-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                         >
                           {approvingStep === index ? "Approving..." : "Approve"}
                         </button>
                         <button
                           onClick={() => handleApproval(index, false)}
                           disabled={approvingStep === index}
-                          className="flex-1 px-4 py-2 bg-zinc-900 text-white border border-zinc-700 text-sm font-medium hover:bg-zinc-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                          className="flex-1 px-4 py-2 bg-zinc-900 text-white border border-zinc-700 text-sm font-medium hover:bg-zinc-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                         >
                           {approvingStep === index ? "Rejecting..." : "Reject"}
                         </button>

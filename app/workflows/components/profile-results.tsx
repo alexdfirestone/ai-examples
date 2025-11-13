@@ -29,7 +29,7 @@ export function ProfileResults({ result }: ProfileResultsProps) {
           WORKFLOW FAILED
         </h2>
         <p className="text-xs text-zinc-500 font-light">
-          The review workflow encountered an error. Please try again.
+          The workflow encountered an error. Please try again.
         </p>
       </div>
     );
