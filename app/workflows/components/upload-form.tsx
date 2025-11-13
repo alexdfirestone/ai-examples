@@ -55,7 +55,7 @@ export function UploadForm({ onSubmit, isLoading }: UploadFormProps) {
               type="button"
               onClick={handleAutoFill}
               disabled={isLoading}
-              className="px-2 py-1 text-xs font-light text-zinc-400 bg-zinc-900 border border-zinc-800 hover:border-zinc-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              className="px-2 py-1 text-xs font-light text-zinc-400 bg-zinc-900 border border-zinc-800 hover:border-zinc-700 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer transition-colors"
             >
               AUTO-FILL
             </button>
@@ -191,7 +191,7 @@ export function UploadForm({ onSubmit, isLoading }: UploadFormProps) {
         <button
           type="submit"
           disabled={isLoading}
-          className="w-full px-6 py-2.5 text-sm font-light text-black bg-white hover:bg-zinc-200 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed transition-colors tracking-wider uppercase"
+          className="w-full px-6 py-2.5 text-sm font-light text-black bg-white hover:bg-zinc-200 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer transition-colors tracking-wider uppercase"
         >
           {isLoading ? "Processing..." : "Initiate Workflow"}
         </button>

@@ -26,7 +26,7 @@ interface WorkflowStep {
   }>;
 }
 
-export default function ResumeReviewPage() {
+export default function WorkflowsPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [result, setResult] = useState<WorkflowResult | null>(null);
   const [selectedWorkflow, setSelectedWorkflow] = useState("resume-review");
@@ -84,10 +84,10 @@ export default function ResumeReviewPage() {
 
     try {
       // Make API call with streaming
-      const response = await fetch("/api/resume-review", {
+      const response = await fetch("/api/workflows", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(input),
+        body: JSON.stringify({ workflow: selectedWorkflow, input }),
       });
 
       if (!response.ok) {
@@ -304,7 +304,7 @@ export default function ResumeReviewPage() {
               <div className="flex items-center gap-8">
                 <button
                   onClick={() => setActiveTab("execution")}
-                  className={`text-sm font-light uppercase tracking-widest pb-2 border-b-2 transition-all flex items-baseline gap-3 ${
+                  className={`text-sm font-light uppercase tracking-widest pb-2 border-b-2 transition-all flex items-baseline gap-3 cursor-pointer ${
                     activeTab === "execution"
                       ? "text-white border-white"
                       : "text-zinc-600 border-transparent hover:text-zinc-400"
@@ -320,9 +320,9 @@ export default function ResumeReviewPage() {
                   disabled={!result}
                   className={`text-sm font-light uppercase tracking-widest pb-2 border-b-2 transition-all ${
                     activeTab === "results"
-                      ? "text-white border-white"
+                      ? "text-white border-white cursor-pointer"
                       : result
-                        ? "text-zinc-600 border-transparent hover:text-zinc-400"
+                        ? "text-zinc-600 border-transparent hover:text-zinc-400 cursor-pointer"
                         : "text-zinc-800 border-transparent cursor-not-allowed"
                   }`}
                 >
@@ -334,7 +334,7 @@ export default function ResumeReviewPage() {
                   <button
                     onClick={handleReset}
                     title="Reset workflow"
-                    className="p-2 text-zinc-600 hover:text-white border border-zinc-800 hover:border-zinc-700 transition-colors"
+                    className="p-2 text-zinc-600 hover:text-white border border-zinc-800 hover:border-zinc-700 transition-colors cursor-pointer"
                   >
                     <svg
                       className="w-4 h-4"
