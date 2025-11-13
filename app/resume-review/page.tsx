@@ -24,6 +24,7 @@ export default function ResumeReviewPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [result, setResult] = useState<WorkflowResult | null>(null);
   const [selectedWorkflow, setSelectedWorkflow] = useState("resume-review");
+  const [activeTab, setActiveTab] = useState<"execution" | "results">("execution");
   const [steps, setSteps] = useState<WorkflowStep[]>([
     { name: "Validate Input", status: "pending" },
     { name: "Ingest Sources", status: "pending" },
@@ -60,6 +61,7 @@ export default function ResumeReviewPage() {
   const handleSubmit = async (input: CandidateInput) => {
     setIsLoading(true);
     setResult(null);
+    setActiveTab("execution");
 
     // Reset steps
     setSteps([
@@ -148,6 +150,8 @@ export default function ResumeReviewPage() {
             // Handle workflow completion
             if (step === "workflow" && status === "completed" && data) {
               setResult(data as WorkflowResult);
+              // Auto-switch to results tab
+              setTimeout(() => setActiveTab("results"), 500);
               // Break out of the loop - workflow is done
               reader.cancel();
               break;
@@ -194,6 +198,7 @@ export default function ResumeReviewPage() {
 
   const handleReset = () => {
     setResult(null);
+    setActiveTab("execution");
     setSteps([
       { name: "Validate Input", status: "pending" },
       { name: "Ingest Sources", status: "pending" },
@@ -214,11 +219,11 @@ export default function ResumeReviewPage() {
   ];
 
   return (
-    <div className="min-h-screen bg-black flex">
+    <div className="h-screen bg-black flex overflow-hidden">
       {/* Left Sidebar */}
-      <div className="w-96 bg-zinc-950 border-r border-zinc-800 flex flex-col overflow-y-auto">
+      <div className="w-96 bg-zinc-950 border-r border-zinc-800 flex flex-col h-full overflow-hidden">
         {/* Header */}
-        <div className="p-6 border-b border-zinc-800">
+        <div className="p-5 border-b border-zinc-800 flex-shrink-0">
           <h1 className="text-xl font-light text-white tracking-wide">
             WORKFLOW AUTOMATION
           </h1>
@@ -228,81 +233,140 @@ export default function ResumeReviewPage() {
         </div>
 
         {/* Workflow Selector */}
-        <div className="p-6 border-b border-zinc-800">
-          <h2 className="text-xs font-medium text-zinc-400 uppercase tracking-wider mb-3">
+        <div className="p-5 border-b border-zinc-800 flex-shrink-0">
+          <label htmlFor="workflow-select" className="block text-xs font-medium text-zinc-400 uppercase tracking-wider mb-3">
             Select Workflow
-          </h2>
-          <div className="space-y-2">
-            {workflows.map((workflow) => (
-              <button
-                key={workflow.id}
-                onClick={() => setSelectedWorkflow(workflow.id)}
-                disabled={isLoading}
-                className={`w-full text-left p-4 rounded-sm border transition-all ${
-                  selectedWorkflow === workflow.id
-                    ? "bg-white text-black border-white"
-                    : "bg-zinc-900 text-zinc-300 border-zinc-800 hover:border-zinc-700"
-                } disabled:opacity-50 disabled:cursor-not-allowed`}
-              >
-                <div className="font-medium text-sm">{workflow.name}</div>
-                <div className="text-xs mt-1 opacity-70">
-                  {workflow.description}
-                </div>
-              </button>
-            ))}
+          </label>
+          <div className="relative">
+            <select
+              id="workflow-select"
+              value={selectedWorkflow}
+              onChange={(e) => setSelectedWorkflow(e.target.value)}
+              disabled={isLoading}
+              className="w-full px-3 py-2.5 bg-zinc-900 border border-zinc-800 text-zinc-300 text-sm font-light focus:outline-none focus:border-zinc-700 disabled:opacity-50 disabled:cursor-not-allowed appearance-none cursor-pointer"
+            >
+              {workflows.map((workflow) => (
+                <option key={workflow.id} value={workflow.id}>
+                  {workflow.name} - {workflow.description}
+                </option>
+              ))}
+            </select>
+            <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-zinc-600">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+              </svg>
+            </div>
           </div>
         </div>
 
-        {/* Form */}
+        {/* Form - Scrollable */}
         <div className="flex-1 overflow-y-auto">
           <UploadForm onSubmit={handleSubmit} isLoading={isLoading} />
         </div>
       </div>
 
       {/* Main Content Area */}
-      <div className="flex-1 flex flex-col items-center justify-center p-12 overflow-y-auto">
+      <div className="flex-1 flex flex-col h-full overflow-hidden">
         {isLoading || result ? (
-          <div className="w-full max-w-4xl">
-            <WorkflowProgress steps={steps} />
-
-            {result && (
-              <div className="mt-12">
-                <ProfileResults result={result} />
-
-                <div className="flex justify-center mt-8">
+          <>
+            {/* Tab Navigation - Fixed at top */}
+            <div className="flex-shrink-0 flex items-center justify-between px-12 py-8 border-b border-zinc-900">
+              <div className="flex-1" />
+              <div className="flex items-center gap-8">
+                <button
+                  onClick={() => setActiveTab("execution")}
+                  className={`text-sm font-light uppercase tracking-widest pb-2 border-b-2 transition-all flex items-baseline gap-3 ${
+                    activeTab === "execution"
+                      ? "text-white border-white"
+                      : "text-zinc-600 border-transparent hover:text-zinc-400"
+                  }`}
+                >
+                  <span>Workflow Execution</span>
+                  <span className="text-xs font-mono">
+                    {steps.filter((s) => s.status === "completed").length}/{steps.length}
+                  </span>
+                </button>
+                <button
+                  onClick={() => setActiveTab("results")}
+                  disabled={!result}
+                  className={`text-sm font-light uppercase tracking-widest pb-2 border-b-2 transition-all ${
+                    activeTab === "results"
+                      ? "text-white border-white"
+                      : result
+                        ? "text-zinc-600 border-transparent hover:text-zinc-400"
+                        : "text-zinc-800 border-transparent cursor-not-allowed"
+                  }`}
+                >
+                  Results
+                </button>
+              </div>
+              <div className="flex-1 flex justify-end">
+                {result && (
                   <button
                     onClick={handleReset}
-                    className="px-8 py-3 text-sm font-light text-white bg-zinc-900 border border-zinc-700 hover:bg-zinc-800 transition-colors tracking-wide"
+                    title="Reset workflow"
+                    className="p-2 text-zinc-600 hover:text-white border border-zinc-800 hover:border-zinc-700 transition-colors"
                   >
-                    REVIEW ANOTHER CANDIDATE
+                    <svg
+                      className="w-4 h-4"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth={2}
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                      />
+                    </svg>
                   </button>
-                </div>
+                )}
               </div>
-            )}
-          </div>
-        ) : (
-          <div className="text-center">
-            <div className="w-16 h-16 border border-zinc-800 rounded-sm flex items-center justify-center mx-auto mb-6">
-              <svg
-                className="w-8 h-8 text-zinc-700"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth={1}
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                />
-              </svg>
             </div>
-            <h3 className="text-base font-light text-zinc-400 tracking-wide">
-              NO ACTIVE WORKFLOW
-            </h3>
-            <p className="text-xs text-zinc-600 mt-2">
-              Configure and initiate a workflow from the sidebar
-            </p>
+
+            {/* Scrollable Tab Content */}
+            <div className="flex-1 overflow-y-auto px-12 py-8">
+              <div className="w-full max-w-4xl mx-auto">
+                {activeTab === "execution" && (
+                  <div className="animate-fadeIn">
+                    <WorkflowProgress steps={steps} />
+                  </div>
+                )}
+
+                {activeTab === "results" && result && (
+                  <div className="animate-fadeIn">
+                    <ProfileResults result={result} />
+                  </div>
+                )}
+              </div>
+            </div>
+          </>
+        ) : (
+          <div className="flex-1 flex items-center justify-center">
+            <div className="text-center">
+              <div className="w-16 h-16 border border-zinc-800 rounded-sm flex items-center justify-center mx-auto mb-6">
+                <svg
+                  className="w-8 h-8 text-zinc-700"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth={1}
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                  />
+                </svg>
+              </div>
+              <h3 className="text-base font-light text-zinc-400 tracking-wide">
+                NO ACTIVE WORKFLOW
+              </h3>
+              <p className="text-xs text-zinc-600 mt-2">
+                Configure and initiate a workflow from the sidebar
+              </p>
+            </div>
           </div>
         )}
       </div>

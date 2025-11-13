@@ -20,8 +20,6 @@ interface WorkflowProgressProps {
 export function WorkflowProgress({ steps }: WorkflowProgressProps) {
   const [expandedSteps, setExpandedSteps] = useState<Set<number>>(new Set());
   const [visibleSteps, setVisibleSteps] = useState<number>(0);
-  const completedCount = steps.filter((s) => s.status === "completed").length;
-  const progress = Math.round((completedCount / steps.length) * 100);
 
   // Animate steps appearing one by one
   useEffect(() => {
@@ -59,26 +57,6 @@ export function WorkflowProgress({ steps }: WorkflowProgressProps) {
 
   return (
     <div className="relative">
-      {/* Progress Header */}
-      <div className="text-center mb-12">
-        <div className="inline-block">
-          <div className="flex items-baseline gap-3 mb-2">
-            <h2 className="text-sm font-light text-zinc-400 uppercase tracking-widest">
-              Workflow Execution
-            </h2>
-            <span className="text-xs text-zinc-600 font-mono">
-              {completedCount}/{steps.length}
-            </span>
-          </div>
-          <div className="w-64 h-px bg-zinc-900 relative overflow-hidden">
-            <div
-              className="absolute left-0 top-0 h-full bg-white transition-all duration-500 ease-out"
-              style={{ width: `${progress}%` }}
-            />
-          </div>
-        </div>
-      </div>
-
       {/* Workflow Steps */}
       <div className="space-y-6">
         {steps.map((step, index) => {
@@ -87,8 +65,8 @@ export function WorkflowProgress({ steps }: WorkflowProgressProps) {
           if (!isVisible) return null;
 
           return (
-            <div
-              key={index}
+          <div
+            key={index}
               className="transform transition-all duration-500 opacity-0 translate-y-4 animate-fadeIn"
               style={{ 
                 animationDelay: `${(index - (visibleSteps - 5 > 0 ? visibleSteps - 5 : 0)) * 50}ms`,
@@ -100,46 +78,46 @@ export function WorkflowProgress({ steps }: WorkflowProgressProps) {
                 <div className="flex flex-col items-center">
                   <div
                     className={`w-10 h-10 border flex items-center justify-center transition-all duration-300 ${
-                      step.status === "completed"
+              step.status === "completed"
                         ? "border-white bg-white"
-                        : step.status === "running"
+                : step.status === "running"
                           ? "border-zinc-500 bg-zinc-900 animate-pulse"
-                          : step.status === "error"
+                  : step.status === "error"
                             ? "border-zinc-700 bg-zinc-800"
                             : "border-zinc-800 bg-black"
-                    }`}
-                  >
-                    {step.status === "completed" ? (
-                      <svg
+            }`}
+          >
+              {step.status === "completed" ? (
+                <svg
                         className="w-5 h-5 text-black"
                         fill="none"
                         stroke="currentColor"
                         strokeWidth={2}
                         viewBox="0 0 24 24"
-                      >
-                        <path
+                >
+                  <path
                           strokeLinecap="round"
                           strokeLinejoin="round"
                           d="M5 13l4 4L19 7"
-                        />
-                      </svg>
-                    ) : step.status === "running" ? (
+                  />
+                </svg>
+              ) : step.status === "running" ? (
                       <div className="w-2 h-2 bg-white rounded-full animate-ping" />
                     ) : step.status === "error" ? (
-                      <svg
+                <svg
                         className="w-4 h-4 text-zinc-500"
-                        fill="none"
+                  fill="none"
                         stroke="currentColor"
                         strokeWidth={2}
-                        viewBox="0 0 24 24"
-                      >
-                        <path
+                  viewBox="0 0 24 24"
+                >
+                  <path
                           strokeLinecap="round"
                           strokeLinejoin="round"
                           d="M6 18L18 6M6 6l12 12"
-                        />
-                      </svg>
-                    ) : (
+                  />
+                </svg>
+              ) : (
                       <span className="text-xs text-zinc-700 font-mono">
                         {String(index + 1).padStart(2, "0")}
                       </span>
@@ -153,79 +131,79 @@ export function WorkflowProgress({ steps }: WorkflowProgressProps) {
                           : "bg-zinc-900"
                       }`}
                     />
-                  )}
-                </div>
+              )}
+            </div>
 
                 {/* Step Content */}
                 <div className="flex-1 pt-2">
                   <div className="flex items-baseline justify-between mb-2">
                     <h3
                       className={`text-base font-light tracking-wide transition-colors ${
-                        step.status === "completed"
+                    step.status === "completed"
                           ? "text-white"
-                          : step.status === "running"
+                      : step.status === "running"
                             ? "text-zinc-300"
-                            : step.status === "error"
+                        : step.status === "error"
                               ? "text-zinc-500"
                               : "text-zinc-700"
-                      }`}
-                    >
-                      {step.name}
+                  }`}
+                >
+                  {step.name}
                     </h3>
-                    {step.toolCalls && step.toolCalls.length > 0 && (
-                      <button
-                        onClick={() => toggleStep(index)}
+                {step.toolCalls && step.toolCalls.length > 0 && (
+                  <button
+                    onClick={() => toggleStep(index)}
                         className="ml-4 text-xs text-zinc-600 hover:text-zinc-400 flex items-center gap-1 font-mono transition-colors"
-                      >
+                  >
                         {step.toolCalls.length} tool{step.toolCalls.length !== 1 ? "s" : ""}
-                        <svg
-                          className={`w-3 h-3 transition-transform ${
-                            expandedSteps.has(index) ? "rotate-180" : ""
-                          }`}
-                          fill="none"
-                          stroke="currentColor"
+                    <svg
+                      className={`w-3 h-3 transition-transform ${
+                        expandedSteps.has(index) ? "rotate-180" : ""
+                      }`}
+                      fill="none"
+                      stroke="currentColor"
                           strokeWidth={2}
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            d="M19 9l-7 7-7-7"
-                          />
-                        </svg>
-                      </button>
-                    )}
-                  </div>
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        d="M19 9l-7 7-7-7"
+                      />
+                    </svg>
+                  </button>
+                )}
+              </div>
 
-                  {step.message && (
-                    <p
+              {step.message && (
+                <p
                       className={`text-xs font-mono mt-1 ${
                         step.status === "error"
                           ? "text-zinc-600"
                           : "text-zinc-700"
-                      }`}
-                    >
-                      {step.message}
-                    </p>
-                  )}
+                  }`}
+                >
+                  {step.message}
+                </p>
+              )}
 
                   {/* Tool Calls */}
-                  {step.toolCalls && step.toolCalls.length > 0 && expandedSteps.has(index) && (
+          {step.toolCalls && step.toolCalls.length > 0 && expandedSteps.has(index) && (
                     <div className="mt-4 pl-4 border-l border-zinc-900 space-y-2 animate-fadeIn">
-                      {step.toolCalls.map((tool, toolIndex) => (
+                  {step.toolCalls.map((tool, toolIndex) => (
                         <div key={toolIndex} className="text-xs">
                           <div className="flex items-center gap-2 mb-0.5">
                             <span className="text-zinc-700 font-mono">
                               {String(toolIndex + 1).padStart(2, "0")}
-                            </span>
+                      </span>
                             <code className="font-mono text-zinc-500 bg-zinc-950 px-2 py-0.5 border border-zinc-900">
-                              {tool.name}
-                            </code>
-                          </div>
-                          <p className="text-zinc-700 font-light ml-6">
-                            {tool.description}
-                          </p>
+                            {tool.name}
+                          </code>
                         </div>
+                          <p className="text-zinc-700 font-light ml-6">
+                          {tool.description}
+                        </p>
+                      </div>
                       ))}
                     </div>
                   )}
