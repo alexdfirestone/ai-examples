@@ -78,3 +78,10 @@ export type ScoringResult = {
   riskFlags: string[];
 };
 
+export type ToolCall = {
+  name: string;
+  description: string;
+  timestamp: number;
+  result?: any;
+};
+

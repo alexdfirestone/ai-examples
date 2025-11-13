@@ -1,20 +1,75 @@
 // Data ingestion step with mocked external fetches
 
-import type { CandidateInput, RawSources } from "../types";
+import type { CandidateInput, RawSources, ToolCall } from "../types";
 import {
   mockResumeText,
   mockLinkedInHtml,
   mockGithubReadme,
 } from "../utils/mocks";
+import { writeStreamUpdate } from "./stream-writer";
 
 export async function ingestSources(
-  input: CandidateInput
+  input: CandidateInput,
+  writable?: WritableStream
 ): Promise<RawSources> {
   "use step";
 
+  const toolCalls: ToolCall[] = [];
   const useMocks = process.env.MOCK_SOURCES !== "false";
 
   if (useMocks) {
+    // Track mock data sources
+    if (input.uploadUrl || true) {
+      const tool1 = {
+        name: "fetchResume",
+        description: "Fetch resume from upload (mocked)",
+        timestamp: Date.now(),
+      };
+      toolCalls.push(tool1);
+      if (writable) {
+        await writeStreamUpdate(writable, {
+          step: "ingest",
+          status: "tool-call",
+          data: { toolCalls },
+          timestamp: Date.now(),
+        });
+      }
+    }
+
+    if (input.linkedInUrl || true) {
+      const tool2 = {
+        name: "fetchLinkedIn",
+        description: "Scrape LinkedIn profile (mocked)",
+        timestamp: Date.now(),
+      };
+      toolCalls.push(tool2);
+      if (writable) {
+        await writeStreamUpdate(writable, {
+          step: "ingest",
+          status: "tool-call",
+          data: { toolCalls },
+          timestamp: Date.now(),
+        });
+      }
+    }
+
+    if (input.githubUrl || true) {
+      const tool3 = {
+        name: "fetchGitHub",
+        description: "Fetch GitHub profile README (mocked)",
+        timestamp: Date.now(),
+      };
+      toolCalls.push(tool3);
+      if (writable) {
+        await writeStreamUpdate(writable, {
+          step: "ingest",
+          status: "tool-call",
+          data: { toolCalls },
+          timestamp: Date.now(),
+        });
+      }
+    }
+
     // Return mock data for POC - always return mock data regardless of URLs
     return {
       resumeText: mockResumeText(),

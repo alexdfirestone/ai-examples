@@ -44,19 +44,19 @@ export function UploadForm({ onSubmit, isLoading }: UploadFormProps) {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-        <div className="flex justify-between items-center mb-6">
-          <h2 className="text-xl font-semibold text-gray-900">
+    <form onSubmit={handleSubmit} className="p-6">
+      <div className="mb-6">
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-xs font-medium text-zinc-400 uppercase tracking-wider">
             Candidate Information
           </h2>
           <button
             type="button"
             onClick={handleAutoFill}
             disabled={isLoading}
-            className="px-4 py-2 text-sm font-medium text-blue-700 bg-blue-50 rounded-md hover:bg-blue-100 disabled:opacity-50 disabled:cursor-not-allowed border border-blue-200"
+            className="px-2 py-1 text-xs font-light text-zinc-400 bg-zinc-900 border border-zinc-800 hover:border-zinc-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
-            Auto-fill with Mock Data
+            AUTO-FILL
           </button>
         </div>
 
@@ -64,27 +64,27 @@ export function UploadForm({ onSubmit, isLoading }: UploadFormProps) {
           <div>
             <label
               htmlFor="candidateId"
-              className="block text-sm font-medium text-gray-700 mb-1"
+              className="block text-xs font-light text-zinc-500 mb-2 tracking-wide"
             >
-              Candidate ID (optional)
+              Candidate ID
             </label>
             <input
               type="text"
               id="candidateId"
               value={candidateId}
               onChange={(e) => setCandidateId(e.target.value)}
-              placeholder="Auto-generated if empty"
+              placeholder="Auto-generated"
               disabled={isLoading}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-50 disabled:cursor-not-allowed"
+              className="w-full px-3 py-2 bg-zinc-900 border border-zinc-800 text-zinc-300 text-sm font-light focus:outline-none focus:border-zinc-700 disabled:opacity-50 disabled:cursor-not-allowed placeholder:text-zinc-700 transition-colors"
             />
           </div>
 
           <div>
             <label
               htmlFor="uploadUrl"
-              className="block text-sm font-medium text-gray-700 mb-1"
+              className="block text-xs font-light text-zinc-500 mb-2 tracking-wide"
             >
-              Resume URL (optional)
+              Resume URL
             </label>
             <input
               type="text"
@@ -93,19 +93,19 @@ export function UploadForm({ onSubmit, isLoading }: UploadFormProps) {
               onChange={(e) => setUploadUrl(e.target.value)}
               placeholder="https://example.com/resume.pdf"
               disabled={isLoading}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-50 disabled:cursor-not-allowed"
+              className="w-full px-3 py-2 bg-zinc-900 border border-zinc-800 text-zinc-300 text-sm font-light focus:outline-none focus:border-zinc-700 disabled:opacity-50 disabled:cursor-not-allowed placeholder:text-zinc-700 transition-colors"
             />
-            <p className="mt-1 text-xs text-gray-500">
-              PDF or DOC file URL (mocked for demo)
+            <p className="mt-1 text-xs text-zinc-700 font-light">
+              Optional • PDF or DOC file URL
             </p>
           </div>
 
           <div>
             <label
               htmlFor="linkedInUrl"
-              className="block text-sm font-medium text-gray-700 mb-1"
+              className="block text-xs font-light text-zinc-500 mb-2 tracking-wide"
             >
-              LinkedIn URL (optional)
+              LinkedIn URL
             </label>
             <input
               type="text"
@@ -114,16 +114,16 @@ export function UploadForm({ onSubmit, isLoading }: UploadFormProps) {
               onChange={(e) => setLinkedInUrl(e.target.value)}
               placeholder="https://linkedin.com/in/username"
               disabled={isLoading}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-50 disabled:cursor-not-allowed"
+              className="w-full px-3 py-2 bg-zinc-900 border border-zinc-800 text-zinc-300 text-sm font-light focus:outline-none focus:border-zinc-700 disabled:opacity-50 disabled:cursor-not-allowed placeholder:text-zinc-700 transition-colors"
             />
           </div>
 
           <div>
             <label
               htmlFor="githubUrl"
-              className="block text-sm font-medium text-gray-700 mb-1"
+              className="block text-xs font-light text-zinc-500 mb-2 tracking-wide"
             >
-              GitHub URL (optional)
+              GitHub URL
             </label>
             <input
               type="text"
@@ -132,14 +132,14 @@ export function UploadForm({ onSubmit, isLoading }: UploadFormProps) {
               onChange={(e) => setGithubUrl(e.target.value)}
               placeholder="https://github.com/username"
               disabled={isLoading}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-50 disabled:cursor-not-allowed"
+              className="w-full px-3 py-2 bg-zinc-900 border border-zinc-800 text-zinc-300 text-sm font-light focus:outline-none focus:border-zinc-700 disabled:opacity-50 disabled:cursor-not-allowed placeholder:text-zinc-700 transition-colors"
             />
           </div>
         </div>
       </div>
 
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-        <h2 className="text-xl font-semibold text-gray-900 mb-6">
+      <div className="mb-6 pt-6 border-t border-zinc-800">
+        <h2 className="text-xs font-medium text-zinc-400 uppercase tracking-wider mb-4">
           Job Context
         </h2>
 
@@ -147,7 +147,7 @@ export function UploadForm({ onSubmit, isLoading }: UploadFormProps) {
           <div>
             <label
               htmlFor="role"
-              className="block text-sm font-medium text-gray-700 mb-1"
+              className="block text-xs font-light text-zinc-500 mb-2 tracking-wide"
             >
               Target Role
             </label>
@@ -158,16 +158,16 @@ export function UploadForm({ onSubmit, isLoading }: UploadFormProps) {
               onChange={(e) => setRole(e.target.value)}
               placeholder="Senior Full-Stack Engineer"
               disabled={isLoading}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-50 disabled:cursor-not-allowed"
+              className="w-full px-3 py-2 bg-zinc-900 border border-zinc-800 text-zinc-300 text-sm font-light focus:outline-none focus:border-zinc-700 disabled:opacity-50 disabled:cursor-not-allowed placeholder:text-zinc-700 transition-colors"
             />
           </div>
 
           <div>
             <label
               htmlFor="skills"
-              className="block text-sm font-medium text-gray-700 mb-1"
+              className="block text-xs font-light text-zinc-500 mb-2 tracking-wide"
             >
-              Required Skills (comma-separated)
+              Required Skills
             </label>
             <input
               type="text"
@@ -176,8 +176,11 @@ export function UploadForm({ onSubmit, isLoading }: UploadFormProps) {
               onChange={(e) => setSkills(e.target.value)}
               placeholder="TypeScript, React, Node.js"
               disabled={isLoading}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-50 disabled:cursor-not-allowed"
+              className="w-full px-3 py-2 bg-zinc-900 border border-zinc-800 text-zinc-300 text-sm font-light focus:outline-none focus:border-zinc-700 disabled:opacity-50 disabled:cursor-not-allowed placeholder:text-zinc-700 transition-colors"
             />
+            <p className="mt-1 text-xs text-zinc-700 font-light">
+              Comma-separated list
+            </p>
           </div>
         </div>
       </div>
@@ -185,9 +188,9 @@ export function UploadForm({ onSubmit, isLoading }: UploadFormProps) {
       <button
         type="submit"
         disabled={isLoading}
-        className="w-full px-6 py-3 text-base font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
+        className="w-full px-6 py-3 text-sm font-light text-black bg-white hover:bg-zinc-200 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed transition-colors tracking-wider uppercase"
       >
-        {isLoading ? "Processing..." : "Start Review"}
+        {isLoading ? "Processing..." : "Initiate Workflow"}
       </button>
     </form>
   );

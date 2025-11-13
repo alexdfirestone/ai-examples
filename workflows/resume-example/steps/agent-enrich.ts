@@ -5,26 +5,60 @@ import type {
   EnrichedProfile,
   CandidateInput,
   CanonicalProfile,
+  ToolCall,
 } from "../types";
 import { extractCanonicalProfile } from "../utils/llm";
 import { webSearch } from "../tools/web-search";
 import { schemaCheck } from "../tools/schema-check";
 import { scoreWithRubric } from "../tools/score-rubric";
+import { writeStreamUpdate } from "./stream-writer";
 
 export async function agentEnrichProfile(args: {
   extracted: ExtractedData;
   jobContext?: CandidateInput["jobContext"];
+  writable?: WritableStream;
 }): Promise<EnrichedProfile> {
   "use step";
 
   const { text, tokens } = args.extracted;
+  const toolCalls: ToolCall[] = [];
 
   console.log(`[agent] Processing ${tokens} tokens of candidate data`);
 
   // Step 1: Extract canonical profile using LLM
+  const tool1 = {
+    name: "extractCanonicalProfile",
+    description: "Extract structured profile from resume text using LLM",
+    timestamp: Date.now(),
+  };
+  toolCalls.push(tool1);
+  if (args.writable) {
+    await writeStreamUpdate(args.writable, {
+      step: "agent-enrich",
+      status: "tool-call",
+      data: { toolCalls },
+      timestamp: Date.now(),
+    });
+  }
+  
   let canonical = await extractCanonicalProfile(text);
 
   // Step 2: Validate schema
+  const tool2 = {
+    name: "schemaCheck",
+    description: "Validate profile matches expected schema",
+    timestamp: Date.now(),
+  };
+  toolCalls.push(tool2);
+  if (args.writable) {
+    await writeStreamUpdate(args.writable, {
+      step: "agent-enrich",
+      status: "tool-call",
+      data: { toolCalls },
+      timestamp: Date.now(),
+    });
+  }
+  
   await schemaCheck(canonical);
 
   // Step 3: Identify gaps
@@ -37,6 +71,21 @@ export async function agentEnrichProfile(args: {
     const searchQuery = buildGapQuery(initialGaps, canonical);
     console.log(`[agent] Searching for: ${searchQuery}`);
 
+    const tool3 = {
+      name: "webSearch",
+      description: `Search for missing information: ${initialGaps.join(", ")}`,
+      timestamp: Date.now(),
+    };
+    toolCalls.push(tool3);
+    if (args.writable) {
+      await writeStreamUpdate(args.writable, {
+        step: "agent-enrich",
+        status: "tool-call",
+        data: { toolCalls },
+        timestamp: Date.now(),
+      });
+    }
+
     const searchResults = await webSearch({ query: searchQuery });
     filledCanonical = tryFillFromSearch(canonical, searchResults);
 
@@ -46,6 +95,21 @@ export async function agentEnrichProfile(args: {
   }
 
   // Step 5: Score against rubric
+  const tool4 = {
+    name: "scoreWithRubric",
+    description: "Evaluate candidate against job requirements",
+    timestamp: Date.now(),
+  };
+  toolCalls.push(tool4);
+  if (args.writable) {
+    await writeStreamUpdate(args.writable, {
+      step: "agent-enrich",
+      status: "tool-call",
+      data: { toolCalls },
+      timestamp: Date.now(),
+    });
+  }
+  
   const scoringResult = await scoreWithRubric({
     canonical: filledCanonical,
     job: args.jobContext,

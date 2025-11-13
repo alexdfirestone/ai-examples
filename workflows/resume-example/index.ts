@@ -49,7 +49,7 @@ export async function reviewCandidateProfile(
 
     // 2) Ingest raw sources (mocked for POC)
     await writeStreamUpdate(writable, { step: "ingest", status: "running", timestamp: Date.now() });
-    const raw = await ingestSources(normalized);
+    const raw = await ingestSources(normalized, writable);
     await writeStreamUpdate(writable, { 
       step: "ingest", 
       status: "completed", 
@@ -63,7 +63,7 @@ export async function reviewCandidateProfile(
 
     // 3) Extract and normalize text
     await writeStreamUpdate(writable, { step: "extract", status: "running", timestamp: Date.now() });
-    const extracted = await extractAndNormalize(raw);
+    const extracted = await extractAndNormalize(raw, writable);
     await writeStreamUpdate(writable, { 
       step: "extract", 
       status: "completed", 
@@ -76,6 +76,7 @@ export async function reviewCandidateProfile(
     const enriched = await agentEnrichProfile({
       extracted,
       jobContext: normalized.jobContext,
+      writable,
     });
     await writeStreamUpdate(writable, { 
       step: "agent-enrich", 
@@ -90,7 +91,7 @@ export async function reviewCandidateProfile(
 
     // 5) Generate recruiter-facing snippets
     await writeStreamUpdate(writable, { step: "generate-snippets", status: "running", timestamp: Date.now() });
-    const snippets = await generateSnippets(enriched);
+    const snippets = await generateSnippets(enriched, writable);
     await writeStreamUpdate(writable, { step: "generate-snippets", status: "completed", timestamp: Date.now() });
 
     // 6) Human-in-the-loop approval (COMMENTED OUT FOR NOW)
@@ -124,6 +125,7 @@ export async function reviewCandidateProfile(
 
     await writeStreamUpdate(writable, { step: "workflow", status: "completed", data: result, timestamp: Date.now() });
 
+    // Stream is automatically closed when workflow returns
     return result;
   } catch (error) {
     console.error(`[workflow] Error processing candidate:`, error);
@@ -134,6 +136,7 @@ export async function reviewCandidateProfile(
       timestamp: Date.now()
     });
 
+    // Stream is automatically closed when workflow returns
     return {
       status: "failed",
       candidateId: input.candidateId,
