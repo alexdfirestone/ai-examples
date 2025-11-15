@@ -4,7 +4,7 @@ import { tools } from './ai/tools';
 
 
 export async function POST(request: Request) {
-  const { messages }: { messages: UIMessage[] } = await request.json();
+  const { messages, model }: { messages: UIMessage[]; model?: string } = await request.json();
 
   // Demo error trigger
   const lastMessage = messages[messages.length - 1];
@@ -12,8 +12,11 @@ export async function POST(request: Request) {
     throw new Error('Demo error triggered');
   }
 
+  // Use provided model or default to claude-sonnet-4.5
+  const selectedModel = model || 'anthropic/claude-sonnet-4.5';
+
   const result = streamText({
-    model: 'openai/gpt-5-mini',
+    model: selectedModel,
     system: 'You are a friendly assistant!',
     messages: convertToModelMessages(messages),
     stopWhen: stepCountIs(5),
