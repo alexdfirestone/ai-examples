@@ -38,6 +38,20 @@ export default function Page() {
               </p>
             </div>
           </Link>
+          
+          <Link 
+            href="/planner"
+            className="block group"
+          >
+            <div className="border-2 border-black p-8 hover:bg-black hover:text-white transition-all duration-200">
+              <h2 className="text-3xl font-mono font-semibold mb-2">
+                Schedule Planner
+              </h2>
+              <p className="font-mono text-sm opacity-70">
+                AI-powered schedule and itinerary planner with calendar export
+              </p>
+            </div>
+          </Link>
         </nav>
       </div>
     </div>

@@ -156,7 +156,7 @@ export function MessagesDebug({ messages, status }: MessagesDebugProps) {
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', fontSize: '13px' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, fontSize: '13px' }}>
       {/* Stats Bar */}
       <div style={{ 
         padding: '12px 16px',
@@ -238,7 +238,8 @@ export function MessagesDebug({ messages, status }: MessagesDebugProps) {
       <div style={{ 
         flex: 1, 
         overflowY: 'auto',
-        padding: '16px'
+        padding: '16px',
+        minHeight: 0
       }}>
         {filteredMessages.length === 0 ? (
           <div style={{ textAlign: 'center', color: '#999', padding: '40px 0' }}>
