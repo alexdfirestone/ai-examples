@@ -1,5 +1,6 @@
 import { tool as createTool } from 'ai';
 import { z } from 'zod';
+import { openai } from '@ai-sdk/openai';
 
 // In-memory state for the schedule (per-request context in this simple version)
 export interface ScheduleWindow {
@@ -31,40 +32,20 @@ function generateBlockId(): string {
 
 // Tool 1: Ask follow-up questions
 export const askFollowupTool = createTool({
-  description: 'Ask the user a clarifying question when you need more information to proceed. Use this when the user request is unclear or missing important details.',
+  description: 'Ask the user clarifying questions when you need more information to proceed. Use this when the user request is unclear or missing important details. You can ask multiple questions at once.',
   inputSchema: z.object({
-    message: z.string().describe('The follow-up question to ask the user'),
+    questions: z.array(z.string()).describe('Array of follow-up questions to ask the user. Each question should be clear and specific.'),
   }),
-  execute: async function ({ message }) {
-    // Simply return the message - the AI will use this to ask clarifying questions
-    return { question: message };
-  },
-});
-
-// Tool 2: Web research (mocked for PoC)
-export const webResearchTool = createTool({
-  description: 'Search the web for information about places, activities, restaurants, etc. Returns plain text search results.',
-  inputSchema: z.object({
-    query: z.string().describe('The search query'),
-  }),
-  execute: async function ({ query }) {
-    // Mock search results for the PoC
-    await new Promise(resolve => setTimeout(resolve, 500));
-    
-    const mockResults = [
-      `${query} - Top rated on TripAdvisor with 4.8 stars. Known for authentic experience and great atmosphere.`,
-      `Best times to visit: Weekday evenings are less crowded. Weekend brunch is highly recommended.`,
-      `Location tips: Located in the downtown area, easily accessible by public transit. Parking available nearby.`,
-      `Insider recommendation: Try the chef's special and arrive early to avoid wait times.`,
-      `Reviews mention excellent service, reasonable prices, and memorable experience.`
-    ];
-    
+  execute: async function ({ questions }) {
+    // Return the questions for UI display
     return { 
-      query,
-      results: mockResults.join('\n\n')
+      questions,
+      count: questions.length
     };
   },
 });
+
+
 
 // Tool 3: Mutate timeline
 export const mutateTimelineTool = createTool({
@@ -78,14 +59,27 @@ export const mutateTimelineTool = createTool({
     // Get current state from context (passed via metadata)
     const state = (this as any).state as ScheduleState;
     
+    // Build update details for display
+    const updates: string[] = [];
+    
     // Update window with provided fields (only overwrite what's provided)
-    if (startDate) state.window.start = startDate;
-    if (endDate) state.window.end = endDate;
-    if (timezone) state.window.tz = timezone;
+    if (startDate) {
+      state.window.start = startDate;
+      updates.push(`Start: ${startDate}`);
+    }
+    if (endDate) {
+      state.window.end = endDate;
+      updates.push(`End: ${endDate}`);
+    }
+    if (timezone) {
+      state.window.tz = timezone;
+      updates.push(`Timezone: ${timezone}`);
+    }
     
     return { 
       window: state.window,
-      message: 'Timeline updated successfully'
+      message: 'Timeline updated successfully',
+      displayMessage: updates.length > 0 ? updates.join(' • ') : 'Timeline updated'
     };
   },
 });
@@ -166,7 +160,7 @@ export const mutateBlocksTool = createTool({
 
 export const tools = {
   ask_followup: askFollowupTool,
-  web_research: webResearchTool,
+  web_search: openai.tools.webSearch({}),
   mutate_timeline: mutateTimelineTool,
   mutate_blocks: mutateBlocksTool,
 };

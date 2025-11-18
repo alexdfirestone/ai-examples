@@ -75,7 +75,10 @@ export default function PlannerPage() {
         }
         setEditingMessageId(null);
       }
-      sendMessage({ text: input });
+      sendMessage({ 
+        text: input,
+        metadata: { scheduleState } // Send current state with each message
+      });
       setInput('');
     }
   };
@@ -106,7 +109,10 @@ export default function PlannerPage() {
     if (lastUserMessage) {
       const textPart = lastUserMessage.parts.find(p => p.type === 'text');
       if (textPart && 'text' in textPart) {
-        sendMessage({ text: textPart.text });
+        sendMessage({ 
+          text: textPart.text,
+          metadata: { scheduleState }
+        });
       }
     }
   };
@@ -118,7 +124,10 @@ export default function PlannerPage() {
   const handleScheduleAction = (message: string) => {
     setInput(message);
     // Auto-send the message
-    sendMessage({ text: message });
+    sendMessage({ 
+      text: message,
+      metadata: { scheduleState }
+    });
   };
 
   const handleExampleChange = (example: string) => {
@@ -141,39 +150,6 @@ export default function PlannerPage() {
           minWidth: 0,
           overflow: 'hidden'
         }}>
-          {/* Example Selector */}
-          <div style={{
-            padding: '8px 14px',
-            borderBottom: '1px solid #e0e0e0',
-            background: '#fafafa',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-            flexShrink: 0
-          }}>
-            <span style={{ fontSize: '11px', color: '#666', fontWeight: '400' }}>Example:</span>
-            <select
-              value={selectedExample}
-              onChange={(e) => handleExampleChange(e.target.value)}
-              style={{
-                padding: '4px 8px',
-                fontSize: '11px',
-                border: '1px solid #e0e0e0',
-                borderRadius: '3px',
-                background: '#fff',
-                cursor: 'pointer',
-                color: '#000'
-              }}
-            >
-              <option value="empty">Empty</option>
-              <option value="2-day">2 Days</option>
-              <option value="5-day">5 Days</option>
-              <option value="1-week">1 Week</option>
-              <option value="2-week">2 Weeks</option>
-              <option value="1-month">1 Month</option>
-            </select>
-          </div>
-          
           <ScheduleView 
             window={scheduleState.window}
             blocks={scheduleState.blocks}
@@ -197,30 +173,13 @@ export default function PlannerPage() {
         {/* Chat Header */}
         <div style={{ 
           borderBottom: '1px solid #e5e5e5',
-          padding: '20px 24px',
-          background: '#fafafa',
+          padding: '12px 16px',
+          background: '#fff',
           display: 'flex',
-          justifyContent: 'space-between',
+          justifyContent: 'flex-end',
           alignItems: 'center',
           flexShrink: 0
         }}>
-          <div>
-            <h2 style={{ 
-              margin: 0,
-              fontSize: '18px',
-              fontWeight: '600',
-              marginBottom: '4px'
-            }}>
-              AI Assistant
-            </h2>
-            <p style={{ 
-              margin: 0,
-              fontSize: '14px',
-              color: '#666'
-            }}>
-              Chat to build your schedule
-            </p>
-          </div>
           <button
             onClick={() => setShowDevTools(!showDevTools)}
             style={{
@@ -248,56 +207,6 @@ export default function PlannerPage() {
         }}>
           {error && <ErrorBanner onReload={handleReload} />}
 
-          {messages.length === 0 && (
-            <div style={{ 
-              textAlign: 'center',
-              padding: '40px 20px',
-              color: '#999'
-            }}>
-              <div style={{ fontSize: '36px', marginBottom: '16px' }}>💬</div>
-              <div style={{ fontSize: '16px', marginBottom: '8px' }}>
-                Start planning!
-              </div>
-              <div style={{ fontSize: '14px', marginBottom: '20px' }}>
-                Try: "Plan a 3-day trip to Tokyo" or "Schedule a team offsite"
-              </div>
-              
-              {/* Quick start suggestions */}
-              <div style={{ 
-                display: 'flex', 
-                flexDirection: 'column', 
-                gap: '8px',
-                alignItems: 'center'
-              }}>
-                {[
-                  'Plan a 3-day trip to Tokyo from May 6-8',
-                  'Schedule a team offsite in San Francisco',
-                  'Create a weekend itinerary for NYC'
-                ].map((suggestion, i) => (
-                  <button
-                    key={i}
-                    onClick={() => {
-                      setInput(suggestion);
-                      sendMessage({ text: suggestion });
-                    }}
-                    style={{
-                      padding: '10px 16px',
-                      background: '#f4f4f4',
-                      border: '1px solid #d0d0d0',
-                      borderRadius: '8px',
-                      cursor: 'pointer',
-                      fontSize: '13px',
-                      color: '#333',
-                      maxWidth: '400px'
-                    }}
-                  >
-                    {suggestion}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-
           {messages.map(message => (
             <PlannerChatMessage
               key={message.id}
@@ -320,6 +229,7 @@ export default function PlannerPage() {
               input={input}
               status={status}
               editingMessageId={editingMessageId}
+              hasMessages={messages.length > 0}
               onInputChange={setInput}
               onSubmit={handleSubmit}
               onCancelEdit={handleCancelEdit}
@@ -362,12 +272,46 @@ export default function PlannerPage() {
               {/* Vertical Resizable Group */}
               <ResizablePanelGroup direction="vertical" style={{ flex: 1, minHeight: 0 }}>
                 {/* Schedule State Panel */}
-                <ResizablePanel defaultSize={40} minSize={20}>
+                <ResizablePanel defaultSize={50} minSize={20}>
                   <div style={{ 
                     height: '100%',
                     overflowY: 'auto',
                     background: '#fff'
                   }}>
+                    <AccordionItem defaultOpen={true}>
+                      <AccordionTrigger>Mock Data</AccordionTrigger>
+                      <AccordionContent>
+                        <div style={{ 
+                          padding: '0 16px 16px'
+                        }}>
+                          <div style={{ marginBottom: '8px', fontSize: '12px', color: '#666' }}>
+                            Load example schedule:
+                          </div>
+                          <select
+                            value={selectedExample}
+                            onChange={(e) => handleExampleChange(e.target.value)}
+                            style={{
+                              width: '100%',
+                              padding: '6px 8px',
+                              fontSize: '12px',
+                              border: '1px solid #e0e0e0',
+                              borderRadius: '4px',
+                              background: '#fff',
+                              cursor: 'pointer',
+                              color: '#000'
+                            }}
+                          >
+                            <option value="empty">Empty</option>
+                            <option value="2-day">2 Days</option>
+                            <option value="5-day">5 Days</option>
+                            <option value="1-week">1 Week</option>
+                            <option value="2-week">2 Weeks</option>
+                            <option value="1-month">1 Month</option>
+                          </select>
+                        </div>
+                      </AccordionContent>
+                    </AccordionItem>
+
                     <AccordionItem defaultOpen={true}>
                       <AccordionTrigger>Schedule State</AccordionTrigger>
                       <AccordionContent>
@@ -392,7 +336,7 @@ export default function PlannerPage() {
                 <ResizableHandle withHandle />
 
                 {/* Messages Debug Panel */}
-                <ResizablePanel defaultSize={60} minSize={20}>
+                <ResizablePanel defaultSize={50} minSize={20}>
                   <div style={{ 
                     height: '100%',
                     overflowY: 'auto'

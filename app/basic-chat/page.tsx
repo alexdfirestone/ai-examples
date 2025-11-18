@@ -159,6 +159,7 @@ export default function Page() {
         input={input}
         status={status}
         editingMessageId={editingMessageId}
+        hasMessages={messages.length > 0}
         onInputChange={setInput}
         onSubmit={handleSubmit}
         onCancelEdit={handleCancelEdit}
