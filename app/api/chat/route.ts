@@ -1,4 +1,3 @@
-import { openai } from '@ai-sdk/openai';
 import { streamText, convertToModelMessages, UIMessage, stepCountIs } from 'ai';
 import { tools } from './ai/tools';
 
@@ -16,11 +15,11 @@ export async function POST(request: Request) {
   const selectedModel = model || 'anthropic/claude-sonnet-4.5';
 
   const result = streamText({
-    model: selectedModel,
+    model: selectedModel as any,
     system: 'You are a friendly assistant!',
     messages: convertToModelMessages(messages),
     stopWhen: stepCountIs(5),
-    tools,
+    tools: tools as any,
   });
 
   return result.toUIMessageStreamResponse();
