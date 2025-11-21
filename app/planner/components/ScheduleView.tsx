@@ -160,12 +160,14 @@ export function ScheduleView({ window, blocks, onSendMessage }: ScheduleViewProp
     }}>
       {/* Header */}
       <div style={{ 
-        padding: '10px 14px',
+        height: '56px',
+        padding: '0 16px',
         borderBottom: '1px solid #e0e0e0',
         background: '#fff',
         display: 'flex',
         justifyContent: 'space-between',
-        alignItems: 'center'
+        alignItems: 'center',
+        flexShrink: 0
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
           {view === 'day' && (
@@ -411,8 +413,8 @@ function UnifiedCalendarView({
                 key={date}
                 style={{
                   flex: '1 1 0',
-                  minWidth: '200px',
-                  maxWidth: '300px',
+                  minWidth: '0',
+                  maxWidth: '100%',
                   display: 'flex',
                   flexDirection: 'column'
                 }}

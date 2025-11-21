@@ -1,9 +1,13 @@
 import { ToolLoopAgent, createAgentUIStreamResponse, type UIMessage } from 'ai';
+import { after } from 'next/server';
 import { tools } from './tools';
 import type { ScheduleState } from './tools';
 import { generateSystemPrompt } from './prompt';
+import { observe, updateActiveObservation, updateActiveTrace } from '@langfuse/tracing';
+import { trace } from '@opentelemetry/api';
+import { langfuseSpanProcessor } from '@/instrumentation';
 
-export async function POST(request: Request) {
+const handler = async (request: Request) => {
   const { messages }: { messages: UIMessage[] } = await request.json();
 
   // Extract the latest schedule state from the last user message metadata
@@ -15,6 +19,30 @@ export async function POST(request: Request) {
     window: {},
     blocks: []
   };
+
+  // Extract input text for tracing
+  const textPart = lastUserMessage?.parts?.find((part: any) => part.type === 'text') as any;
+  const inputText = textPart?.text as string | undefined;
+
+  // Add metadata to the trace
+  updateActiveObservation({
+    input: inputText,
+    metadata: {
+      model: 'openai/gpt-5-mini',
+      messageCount: messages.length,
+      scheduleBlockCount: state.blocks.length,
+      hasTimeWindow: !!(state.window.start && state.window.end),
+    },
+  });
+
+  updateActiveTrace({
+    name: 'schedule-planner',
+    input: inputText,
+    metadata: {
+      model: 'openai/gpt-5-mini',
+      scheduleState: state,
+    },
+  });
 
   // Bind state to each tool function
   const toolsWithState = {
@@ -35,12 +63,58 @@ export async function POST(request: Request) {
     model: 'openai/gpt-5-mini',
     instructions: generateSystemPrompt(),
     tools: toolsWithState as any,
+    experimental_telemetry: { isEnabled: true },
   });
 
   // Use the agent to generate a response
-  return createAgentUIStreamResponse({
+  const response = createAgentUIStreamResponse({
     agent: schedulePlannerAgent,
     messages,
+    onFinish: async (result) => {
+      // Update trace with final output after stream completes
+      const lastMessageParts = result.messages?.[result.messages.length - 1]?.parts;
+      const outputTextPart = lastMessageParts?.find((part: any) => part.type === 'text') as any;
+      const outputText = outputTextPart?.text as string | undefined;
+      
+      updateActiveObservation({
+        output: outputText,
+        metadata: {
+          messageCount: result.messages?.length || 0,
+        },
+      });
+      updateActiveTrace({
+        output: outputText,
+      });
+
+      // End span manually after stream has finished
+      trace.getActiveSpan()?.end();
+    },
+    onError: (error: unknown) => {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      updateActiveObservation({
+        output: errorMessage,
+        level: 'ERROR',
+      });
+      updateActiveTrace({
+        output: errorMessage,
+      });
+
+      // Manually end the span
+      trace.getActiveSpan()?.end();
+      
+      return errorMessage;
+    },
   });
-}
+
+  // Critical for serverless: flush traces before function terminates
+  after(async () => await langfuseSpanProcessor.forceFlush());
+
+  return response;
+};
+
+// Wrap handler with observe() to create a Langfuse trace
+export const POST = observe(handler, {
+  name: 'handle-schedule-planner',
+  endOnExit: false, // Don't end observation until stream finishes
+});
 

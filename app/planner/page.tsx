@@ -44,20 +44,35 @@ export default function PlannerPage() {
       .find(m => m.role === 'assistant');
 
     if (latestAssistantMessage) {
+      // Collect all updates first, then apply once
+      let newWindow = null;
+      let newBlocks = null;
+      let hasUpdates = false;
+
       // Look through parts for tool outputs
       for (const part of latestAssistantMessage.parts) {
         const partAny = part as any;
         if (partAny.type?.startsWith('tool-') && partAny.state === 'output-available') {
           const output = partAny.output as any;
           
-          // Update schedule state if tool returned blocks or window
-          if (output?.blocks !== undefined || output?.window !== undefined) {
-            setScheduleState(prev => ({
-              window: output.window || prev.window,
-              blocks: output.blocks || prev.blocks
-            }));
+          // Collect updates
+          if (output?.window !== undefined) {
+            newWindow = output.window;
+            hasUpdates = true;
+          }
+          if (output?.blocks !== undefined) {
+            newBlocks = output.blocks;
+            hasUpdates = true;
           }
         }
+      }
+
+      // Apply all updates at once, only if there were changes
+      if (hasUpdates) {
+        setScheduleState(prev => ({
+          window: newWindow !== null ? newWindow : prev.window,
+          blocks: newBlocks !== null ? newBlocks : prev.blocks
+        }));
       }
     }
   }, [messages]);
@@ -172,14 +187,33 @@ export default function PlannerPage() {
         }}>
         {/* Chat Header */}
         <div style={{ 
-          borderBottom: '1px solid #e5e5e5',
-          padding: '12px 16px',
+          height: '56px',
+          padding: '0 16px',
+          borderBottom: '1px solid #e0e0e0',
           background: '#fff',
           display: 'flex',
-          justifyContent: 'flex-end',
+          justifyContent: 'space-between',
           alignItems: 'center',
           flexShrink: 0
         }}>
+          <button
+            onClick={() => setMessages([])}
+            style={{
+              padding: '6px 12px',
+              background: 'transparent',
+              border: '1px solid #d0d0d0',
+              borderRadius: '6px',
+              cursor: 'pointer',
+              fontSize: '16px',
+              color: '#666',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center'
+            }}
+            title="Reset Chat"
+          >
+            ↻
+          </button>
           <button
             onClick={() => setShowDevTools(!showDevTools)}
             style={{
@@ -192,7 +226,7 @@ export default function PlannerPage() {
               color: '#666'
             }}
           >
-            {showDevTools ? '✕ Dev Tools' : '⚙ Dev Tools'}
+            {showDevTools ? 'Hide Dev Tools' : 'Show Dev Tools'}
           </button>
         </div>
 
