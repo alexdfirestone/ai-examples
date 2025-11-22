@@ -29,6 +29,11 @@ export default function PlannerPage() {
   const [showDevTools, setShowDevTools] = useState(false);
   const [selectedExample, setSelectedExample] = useState<string>('empty');
   const [scheduleState, setScheduleState] = useState<ScheduleState>(exampleSchedules['empty']);
+  
+  // Detect user's timezone
+  const userTimezone = typeof window !== 'undefined' 
+    ? Intl.DateTimeFormat().resolvedOptions().timeZone 
+    : 'UTC';
 
   const { messages, sendMessage, setMessages, status, stop, error, regenerate } = useChat({
     transport: new DefaultChatTransport({
@@ -92,7 +97,10 @@ export default function PlannerPage() {
       }
       sendMessage({ 
         text: input,
-        metadata: { scheduleState } // Send current state with each message
+        metadata: { 
+          scheduleState,
+          timezone: userTimezone
+        }
       });
       setInput('');
     }
@@ -126,7 +134,10 @@ export default function PlannerPage() {
       if (textPart && 'text' in textPart) {
         sendMessage({ 
           text: textPart.text,
-          metadata: { scheduleState }
+          metadata: { 
+            scheduleState,
+            timezone: userTimezone
+          }
         });
       }
     }
@@ -141,7 +152,10 @@ export default function PlannerPage() {
     // Auto-send the message
     sendMessage({ 
       text: message,
-      metadata: { scheduleState }
+      metadata: { 
+        scheduleState,
+        timezone: userTimezone
+      }
     });
   };
 

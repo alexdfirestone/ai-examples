@@ -794,8 +794,8 @@ function DayView({
   };
 
   return (
-    <div style={{ background: '#fff', padding: '12px 20px', height: '100%', overflow: 'hidden' }}>
-      <div style={{ position: 'relative', height: '100%' }}>
+    <div style={{ background: '#fff', padding: '12px 20px', height: '100%', overflow: 'auto' }}>
+      <div style={{ position: 'relative' }}>
         {/* Simplified event list */}
         <div style={{
           display: 'flex',

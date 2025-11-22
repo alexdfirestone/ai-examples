@@ -13,6 +13,7 @@ const handler = async (request: Request) => {
   // Extract the latest schedule state from the last user message metadata
   const lastUserMessage = [...messages].reverse().find(m => m.role === 'user');
   const clientState = (lastUserMessage?.metadata as any)?.scheduleState;
+  const userTimezone = (lastUserMessage?.metadata as any)?.timezone;
 
   // Initialize state from client or use empty state
   const state: ScheduleState = clientState || {
@@ -65,9 +66,14 @@ const handler = async (request: Request) => {
   // Create the agent with the bound tools
   const schedulePlannerAgent = new ToolLoopAgent({
     model: 'openai/gpt-5-mini',
-    instructions: generateSystemPrompt(),
+    instructions: generateSystemPrompt(userTimezone),
     tools: toolsWithState as any,
     experimental_telemetry: { isEnabled: true },
+    providerOptions: {
+      openai: {
+        reasoningEffort: 'low', // Increases autonomous exploration
+      },
+    },
   });
 
   // Use the agent to generate a response
