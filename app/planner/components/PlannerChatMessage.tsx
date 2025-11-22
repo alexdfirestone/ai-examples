@@ -31,12 +31,14 @@ const TOOL_DISPLAY_NAMES: Record<string, string> = {
   mutate_blocks: 'Schedule Blocks',
   web_research: 'Web Research',
   ask_followup: 'Follow-up Question',
+  read_schedule: 'Read Schedule',
 };
 
 const TOOL_SUCCESS_MESSAGES: Record<string, string> = {
   mutate_timeline: 'Timeline updated',
   web_research: 'Search completed',
   ask_followup: 'Questions',
+  read_schedule: 'Schedule read',
 };
 
 // ============================================================================
@@ -103,6 +105,15 @@ function ToolIcon({ toolName }: { toolName: string }) {
         <svg style={iconStyle} viewBox="0 0 14 14" fill="none">
           <path d="M7 10.5V10.5M7 8C7 8 7 7.5 7 7C7 5.89543 7.89543 5 9 5C10.1046 5 11 5.89543 11 7C11 7.5 10.5 8 10 8.5C9.5 9 9 9 9 10" 
             stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" transform="translate(-2, -1) scale(0.85)"/>
+        </svg>
+      );
+    case 'read_schedule':
+      return (
+        <svg style={iconStyle} viewBox="0 0 14 14" fill="none">
+          <path d="M2 4C2 2.89543 2.89543 2 4 2H10C11.1046 2 12 2.89543 12 4V10C12 11.1046 11.1046 12 10 12H4C2.89543 12 2 11.1046 2 10V4Z" stroke="currentColor" strokeWidth="1.5"/>
+          <path d="M4 5H10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+          <path d="M4 7H10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+          <path d="M4 9H8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
         </svg>
       );
     default:
@@ -223,6 +234,8 @@ function ToolCallSuccess({ toolName, input, output }: { toolName: string; input?
     message = output.displayMessage;
   } else if (toolName === 'mutate_blocks' && output?.message) {
     message = output.message;
+  } else if (toolName === 'read_schedule' && output?.summary) {
+    message = output.summary;
   } else {
     message = TOOL_SUCCESS_MESSAGES[toolName] || 'Completed';
   }

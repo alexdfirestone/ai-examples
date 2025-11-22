@@ -55,6 +55,10 @@ const handler = async (request: Request) => {
     mutate_blocks: {
       ...tools.mutate_blocks,
       execute: tools.mutate_blocks.execute?.bind({ state })
+    },
+    read_schedule: {
+      ...tools.read_schedule,
+      execute: tools.read_schedule.execute?.bind({ state })
     }
   };
 

@@ -158,10 +158,31 @@ export const mutateBlocksTool = createTool({
   },
 });
 
+// Tool 5: Read schedule
+export const readScheduleTool = createTool({
+  description: 'Read the current schedule state, including the timeline window and all blocks. Use this to understand what is currently planned before making modifications or when answering questions about the schedule. Returns blocks with their IDs, which are required for updates and deletions.',
+  inputSchema: z.object({}),
+  execute: async function (input, { toolCallId }) {
+    const state = (this as any).state as ScheduleState;
+    
+    // Sort blocks by start time for consistent reading
+    const sortedBlocks = [...state.blocks].sort((a, b) => 
+      new Date(a.start).getTime() - new Date(b.start).getTime()
+    );
+
+    return {
+      window: state.window,
+      blocks: sortedBlocks,
+      summary: `Read ${sortedBlocks.length} blocks. Timeline: ${state.window.start || 'Unset'} to ${state.window.end || 'Unset'} (${state.window.tz || 'No timezone set'})`
+    };
+  },
+});
+
 export const tools = {
   ask_followup: askFollowupTool,
   web_search: openai.tools.webSearch({}),
   mutate_timeline: mutateTimelineTool,
   mutate_blocks: mutateBlocksTool,
+  read_schedule: readScheduleTool,
 };
 
