@@ -44,6 +44,11 @@ const handler = async (request: Request) => {
     messages: convertToModelMessages(messages),
     stopWhen: stepCountIs(5),
     tools: tools as any,
+    providerOptions: {
+      openai: {
+        reasoningEffort: 'low', // Increases autonomous exploration
+      },
+    },
     experimental_telemetry: { isEnabled: true },
     onFinish: async (result) => {
       // Update trace with final output after stream completes
