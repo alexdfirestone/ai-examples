@@ -52,6 +52,20 @@ export default function Page() {
               </p>
             </div>
           </Link>
+          
+          <Link 
+            href="/gateway-wizard"
+            className="block group"
+          >
+            <div className="border-2 border-black p-8 hover:bg-black hover:text-white transition-all duration-200">
+              <h2 className="text-3xl font-mono font-semibold mb-2">
+                AI Gateway Wizard
+              </h2>
+              <p className="font-mono text-sm opacity-70">
+                Chat with dynamically loaded models from AI Gateway
+              </p>
+            </div>
+          </Link>
         </nav>
       </div>
     </div>
