@@ -12,77 +12,49 @@ interface ChatTabProps {
   providerOnly: string[] | null;
 }
 
-// Mock data generators for simulations
-function generateRetryMockData(model: string, providers: string[] = []) {
-  const [vendor, modelName] = model.split('/');
-  const primaryProvider = providers[0] || vendor;
-  const fallbacks = providers.slice(1);
-  const now = Date.now();
-  
-  return {
-    routing: {
-      originalModelId: model,
-      resolvedProvider: primaryProvider,
-      resolvedProviderApiModelId: `${modelName}-2024-08-06`,
-      internalResolvedModelId: `${primaryProvider}:${modelName}-2024-08-06`,
-      fallbacksAvailable: fallbacks,
-      internalReasoning: `Rate limit hit on ${primaryProvider}. Retried after 1000ms backoff. Request succeeded on retry attempt.`,
-      planningReasoning: `System credentials planned for: ${providers.join(', ') || primaryProvider}. Total execution order: ${providers.map(p => `${p}(system)`).join(' → ') || `${primaryProvider}(system)`}`,
-      canonicalSlug: model,
-      finalProvider: primaryProvider,
-      attempts: [
-        {
-          provider: primaryProvider,
-          internalModelId: `${primaryProvider}:${modelName}-2024-08-06`,
-          providerApiModelId: `${modelName}-2024-08-06`,
-          credentialType: "system",
-          success: false,
-          startTime: now,
-          endTime: now + 150,
-          statusCode: 429,
-          error: "rate_limit_exceeded"
-        },
-        {
-          provider: primaryProvider,
-          internalModelId: `${primaryProvider}:${modelName}-2024-08-06`,
-          providerApiModelId: `${modelName}-2024-08-06`,
-          credentialType: "system",
-          success: true,
-          startTime: now + 1150,
-          endTime: now + 1280,
-          statusCode: 200
-        }
-      ],
-      modelAttemptCount: 1,
-      totalProviderAttemptCount: 2
-    },
-    cost: "0.00018750",
-    marketCost: "0.00018750",
-    generationId: `gen_${Math.random().toString(36).substring(2, 15).toUpperCase()}`,
-    billableWebSearchCalls: 0
-  };
-}
-
+// Mock data generator for fallback simulation
 function generateFallbackMockData(model: string, providers: string[]) {
   const [vendor, modelName] = model.split('/');
   const primaryProvider = providers[0] || vendor;
-  const fallbackProvider = providers[1] || 'bedrock';
+  const fallbackProvider = providers[1] || vendor;
   const remainingFallbacks = providers.slice(2);
   const now = Date.now();
   
-  // Generate realistic model IDs based on provider
-  const getProviderModelId = (provider: string) => {
-    if (provider === 'bedrock') return `${vendor}.${modelName}-v1:0`;
-    if (provider === 'azure') return `${modelName}`;
-    return `${modelName}-2024-08-06`;
+  // Generate realistic model IDs based on provider - fully dynamic for all provider types
+  const getProviderModelId = (provider: string, modelName: string, vendor: string) => {
+    const lowerProvider = provider.toLowerCase();
+    
+    // Each provider has their own model ID format
+    switch (lowerProvider) {
+      case 'bedrock':
+        return `${vendor}.${modelName}-v1:0`;
+      case 'azure':
+        return modelName; // Azure uses deployment names
+      case 'openai':
+        return `${modelName}-2024-08-06`;
+      case 'anthropic':
+        return `${modelName}-20240229`;
+      case 'google':
+      case 'vertex':
+        return `${modelName}-001`;
+      case 'groq':
+        return `${modelName}-preview`;
+      case 'mistral':
+        return `${modelName}-latest`;
+      default:
+        return `${modelName}-2024-08-06`; // Generic fallback
+    }
   };
+  
+  const primaryModelId = getProviderModelId(primaryProvider, modelName, vendor);
+  const fallbackModelId = getProviderModelId(fallbackProvider, modelName, vendor);
   
   return {
     routing: {
       originalModelId: model,
       resolvedProvider: primaryProvider,
-      resolvedProviderApiModelId: getProviderModelId(fallbackProvider),
-      internalResolvedModelId: `${fallbackProvider}:${getProviderModelId(fallbackProvider)}`,
+      resolvedProviderApiModelId: fallbackModelId,
+      internalResolvedModelId: `${fallbackProvider}:${fallbackModelId}`,
       fallbacksAvailable: remainingFallbacks,
       internalReasoning: `Primary provider ${primaryProvider} returned 529 (overloaded). Falling back to ${fallbackProvider}. Request succeeded on fallback.`,
       planningReasoning: `System credentials planned for: ${providers.join(', ')}. Total execution order: ${providers.map(p => `${p}(system)`).join(' → ')}`,
@@ -91,8 +63,8 @@ function generateFallbackMockData(model: string, providers: string[]) {
       attempts: [
         {
           provider: primaryProvider,
-          internalModelId: `${primaryProvider}:${modelName}-2024-08-06`,
-          providerApiModelId: `${modelName}-2024-08-06`,
+          internalModelId: `${primaryProvider}:${primaryModelId}`,
+          providerApiModelId: primaryModelId,
           credentialType: "system",
           success: false,
           startTime: now,
@@ -102,8 +74,8 @@ function generateFallbackMockData(model: string, providers: string[]) {
         },
         {
           provider: fallbackProvider,
-          internalModelId: `${fallbackProvider}:${getProviderModelId(fallbackProvider)}`,
-          providerApiModelId: getProviderModelId(fallbackProvider),
+          internalModelId: `${fallbackProvider}:${fallbackModelId}`,
+          providerApiModelId: fallbackModelId,
           credentialType: "system",
           success: true,
           startTime: now + 102,
@@ -276,7 +248,6 @@ function GatewayMetadata({ data }: { data: any }) {
 
 export function ChatTab({ selectedModel, providerOrder, providerOnly }: ChatTabProps) {
   const [input, setInput] = useState('');
-  const [simulateRetry, setSimulateRetry] = useState(false);
   const [simulateFallback, setSimulateFallback] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -332,21 +303,19 @@ export function ChatTab({ selectedModel, providerOrder, providerOnly }: ChatTabP
   
   // Generate simulated metadata for display
   const getSimulatedMetadata = useMemo(() => {
-    if (!simulateRetry && !simulateFallback) return () => null;
+    if (!simulateFallback || providers.length < 2) return () => null;
     
     // Create a stable cache based on message IDs
     const cache = new Map<string, any>();
     
     return (messageId: string) => {
       if (!cache.has(messageId)) {
-        const mockData = simulateFallback && providers.length >= 2
-          ? generateFallbackMockData(activeModel, providers)
-          : generateRetryMockData(activeModel, providers);
+        const mockData = generateFallbackMockData(activeModel, providers);
         cache.set(messageId, mockData);
       }
       return cache.get(messageId);
     };
-  }, [simulateRetry, simulateFallback, providers, activeModel]);
+  }, [simulateFallback, providers, activeModel]);
 
   const isLoading = status === 'submitted' || status === 'streaming';
 
@@ -423,8 +392,8 @@ export function ChatTab({ selectedModel, providerOrder, providerOnly }: ChatTabP
             </div>
             <p className="text-lg font-medium text-foreground mb-1">Test your gateway configuration</p>
             <p className="text-sm text-muted-foreground">Start chatting to see it in action</p>
-            {(simulateRetry || simulateFallback) && (
-              <p className="text-xs text-amber-600 mt-2">Simulation mode active — type anything to see the demo</p>
+            {simulateFallback && (
+              <p className="text-xs text-violet-600 mt-2">Simulation mode active — type anything to see the demo</p>
             )}
           </div>
         ) : (
@@ -433,7 +402,7 @@ export function ChatTab({ selectedModel, providerOrder, providerOnly }: ChatTabP
             const content = textPart && 'text' in textPart ? textPart.text : '';
             const isUser = message.role === 'user';
             // Use simulated metadata when simulation is enabled, otherwise use real metadata
-            const gatewayMeta = (simulateRetry || simulateFallback) && !isUser
+            const gatewayMeta = simulateFallback && !isUser
               ? getSimulatedMetadata(message.id)
               : (message.metadata as any)?.gateway;
             
@@ -489,41 +458,10 @@ export function ChatTab({ selectedModel, providerOrder, providerOnly }: ChatTabP
 
       {/* Input Area */}
       <div className="border-t bg-background">
-        {/* Simulation Checkboxes */}
+        {/* Simulation Checkbox */}
         <div className="px-4 pt-3 pb-2 border-b bg-muted/20">
-          <div className="flex items-center justify-center gap-6 max-w-4xl mx-auto">
+          <div className="flex items-center justify-center gap-4 max-w-4xl mx-auto">
             <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">Simulate:</span>
-            
-            <label className={`flex items-center gap-2 cursor-pointer group ${simulateRetry ? 'text-amber-600' : 'text-muted-foreground'}`}>
-              <div className="relative">
-                <input
-                  type="checkbox"
-                  checked={simulateRetry}
-                  onChange={(e) => {
-                    setSimulateRetry(e.target.checked);
-                    if (e.target.checked) setSimulateFallback(false);
-                  }}
-                  className="sr-only peer"
-                />
-                <div className={`w-4 h-4 rounded border-2 transition-colors ${
-                  simulateRetry 
-                    ? 'bg-amber-500 border-amber-500' 
-                    : 'border-zinc-300 group-hover:border-amber-400'
-                }`}>
-                  {simulateRetry && (
-                    <svg className="w-3 h-3 text-white absolute top-0.5 left-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                    </svg>
-                  )}
-                </div>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                </svg>
-                <span className="text-xs font-medium">Rate Limit Retry</span>
-              </div>
-            </label>
             
             <label className={`flex items-center gap-2 cursor-pointer group ${simulateFallback ? 'text-violet-600' : 'text-muted-foreground'} ${providers.length < 2 ? 'opacity-50 cursor-not-allowed' : ''}`}>
               <div className="relative">
@@ -531,10 +469,7 @@ export function ChatTab({ selectedModel, providerOrder, providerOnly }: ChatTabP
                   type="checkbox"
                   checked={simulateFallback}
                   disabled={providers.length < 2}
-                  onChange={(e) => {
-                    setSimulateFallback(e.target.checked);
-                    if (e.target.checked) setSimulateRetry(false);
-                  }}
+                  onChange={(e) => setSimulateFallback(e.target.checked)}
                   className="sr-only peer"
                 />
                 <div className={`w-4 h-4 rounded border-2 transition-colors ${
