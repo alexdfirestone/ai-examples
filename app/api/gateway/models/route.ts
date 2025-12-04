@@ -1,4 +1,4 @@
-import { gateway } from '@ai-sdk/gateway';
+import { gateway } from 'ai';
 import { NextResponse } from 'next/server';
 
 // All available providers in AI Gateway
