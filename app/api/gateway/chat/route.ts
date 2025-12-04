@@ -1,4 +1,4 @@
-import { gateway } from '@ai-sdk/gateway';
+import { gateway } from 'ai'
 import { streamText, convertToModelMessages } from 'ai';
 
 export async function POST(req: Request) {
