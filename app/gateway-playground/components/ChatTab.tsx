@@ -251,6 +251,9 @@ export function ChatTab({ selectedModel, fallbackModel, providerOrder, providerO
   const [input, setInput] = useState('');
   const [simulateFallback, setSimulateFallback] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  
+  // Track which messages should show simulated metadata
+  const [simulatedMessageIds, setSimulatedMessageIds] = useState<Set<string>>(new Set());
 
   // Use the configured model or fall back to default
   const activeModel = selectedModel || DEFAULT_MODEL;
@@ -297,30 +300,50 @@ export function ChatTab({ selectedModel, fallbackModel, providerOrder, providerO
 
   const handleNewChat = () => {
     setMessages([]);
+    setSimulatedMessageIds(new Set());
   };
+
+  // Track the simulation state when submitting
+  const simulationStateOnSubmit = useRef(false);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!input.trim() || !activeModel) return;
+    
+    // Capture the simulation state at the time of submission
+    simulationStateOnSubmit.current = simulateFallback && providers.length >= 2;
+    
     sendMessage({ text: input });
     setInput('');
   };
-  
-  // Generate simulated metadata for display
-  const getSimulatedMetadata = useMemo(() => {
-    if (!simulateFallback || providers.length < 2) return () => null;
+
+  // Track new assistant messages and mark them for simulation if needed
+  useEffect(() => {
+    if (messages.length === 0) return;
     
-    // Create a stable cache based on message IDs
-    const cache = new Map<string, any>();
+    const lastMessage = messages[messages.length - 1];
     
-    return (messageId: string) => {
-      if (!cache.has(messageId)) {
-        const mockData = generateFallbackMockData(activeModel, providers);
-        cache.set(messageId, mockData);
+    // If the last message is an assistant message and we had simulation enabled when submitting
+    if (lastMessage.role === 'assistant' && simulationStateOnSubmit.current) {
+      // Check if we haven't already marked this message
+      if (!simulatedMessageIds.has(lastMessage.id)) {
+        setSimulatedMessageIds((prev) => new Set(prev).add(lastMessage.id));
+        // Reset the flag after marking
+        simulationStateOnSubmit.current = false;
       }
-      return cache.get(messageId);
-    };
-  }, [simulateFallback, providers, activeModel]);
+    }
+  }, [messages, simulatedMessageIds]);
+  
+  // Generate simulated metadata for display - cache is stable across renders
+  const simulatedMetadataCache = useRef(new Map<string, any>());
+  
+  const getSimulatedMetadata = (messageId: string) => {
+    if (!simulatedMetadataCache.current.has(messageId)) {
+      const mockData = generateFallbackMockData(activeModel, providers);
+      simulatedMetadataCache.current.set(messageId, mockData);
+    }
+    return simulatedMetadataCache.current.get(messageId);
+  };
 
   const isLoading = status === 'submitted' || status === 'streaming';
 
@@ -333,7 +356,7 @@ export function ChatTab({ selectedModel, fallbackModel, providerOrder, providerO
     <div className="flex flex-col h-full bg-background">
       {/* Configuration Display */}
       <div className="border-b p-4 bg-muted/30">
-        <div className="flex items-start justify-between gap-4">
+        <div className="flex items-start justify-between gap-4 mb-3">
           <div className="text-xs space-y-1">
             <div className="flex items-center gap-2">
               <span className="text-muted-foreground">Model:</span>
@@ -348,7 +371,7 @@ export function ChatTab({ selectedModel, fallbackModel, providerOrder, providerO
                   <svg className="w-3 h-3 text-muted-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6" />
                   </svg>
-                  <code className="bg-emerald-500/10 px-1.5 py-0.5 rounded text-emerald-600 font-medium border border-emerald-500/20">
+                  <code className="bg-muted px-1.5 py-0.5 rounded text-muted-foreground font-medium">
                     {fallbackModel}
                   </code>
                   <span className="text-[10px] text-muted-foreground">(fallback)</span>
@@ -395,6 +418,55 @@ export function ChatTab({ selectedModel, fallbackModel, providerOrder, providerO
             </button>
           )}
         </div>
+
+        {/* Simulation Checkbox */}
+        <div className="pt-3 border-t">
+          <div className="flex items-center gap-4">
+            <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">Simulate:</span>
+            
+            <label className={`flex items-center gap-2 cursor-pointer group ${simulateFallback ? 'text-violet-600' : 'text-muted-foreground'} ${providers.length < 2 ? 'opacity-50 cursor-not-allowed' : ''}`}>
+              <div className="relative">
+                <input
+                  type="checkbox"
+                  checked={simulateFallback}
+                  disabled={providers.length < 2}
+                  onChange={(e) => setSimulateFallback(e.target.checked)}
+                  className="sr-only peer"
+                />
+                <div className={`w-4 h-4 rounded border-2 transition-colors ${
+                  simulateFallback 
+                    ? 'bg-violet-500 border-violet-500' 
+                    : providers.length < 2 
+                      ? 'border-zinc-200' 
+                      : 'border-zinc-300 group-hover:border-violet-400'
+                }`}>
+                  {simulateFallback && (
+                    <svg className="w-3 h-3 text-white absolute top-0.5 left-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                    </svg>
+                  )}
+                </div>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+                </svg>
+                <span className="text-xs font-medium">Provider Fallback</span>
+                {providers.length >= 2 && (
+                  <span className="text-[10px] text-muted-foreground">
+                    ({providers[0]} → {providers[1]})
+                  </span>
+                )}
+              </div>
+            </label>
+            
+            {providers.length < 2 && (
+              <span className="text-[10px] text-muted-foreground italic">
+                Add 2+ providers to test fallback
+              </span>
+            )}
+          </div>
+        </div>
       </div>
 
       {/* Messages Area */}
@@ -417,8 +489,9 @@ export function ChatTab({ selectedModel, fallbackModel, providerOrder, providerO
             const textPart = message.parts.find(p => p.type === 'text');
             const content = textPart && 'text' in textPart ? textPart.text : '';
             const isUser = message.role === 'user';
-            // Use simulated metadata when simulation is enabled, otherwise use real metadata
-            const gatewayMeta = simulateFallback && !isUser
+            // Use simulated metadata only if this specific message was sent with simulation enabled
+            const shouldSimulate = simulatedMessageIds.has(message.id);
+            const gatewayMeta = shouldSimulate && !isUser
               ? getSimulatedMetadata(message.id)
               : (message.metadata as any)?.gateway;
             
@@ -474,55 +547,6 @@ export function ChatTab({ selectedModel, fallbackModel, providerOrder, providerO
 
       {/* Input Area */}
       <div className="border-t bg-background">
-        {/* Simulation Checkbox */}
-        <div className="px-4 pt-3 pb-2 border-b bg-muted/20">
-          <div className="flex items-center justify-center gap-4 max-w-4xl mx-auto">
-            <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">Simulate:</span>
-            
-            <label className={`flex items-center gap-2 cursor-pointer group ${simulateFallback ? 'text-violet-600' : 'text-muted-foreground'} ${providers.length < 2 ? 'opacity-50 cursor-not-allowed' : ''}`}>
-              <div className="relative">
-                <input
-                  type="checkbox"
-                  checked={simulateFallback}
-                  disabled={providers.length < 2}
-                  onChange={(e) => setSimulateFallback(e.target.checked)}
-                  className="sr-only peer"
-                />
-                <div className={`w-4 h-4 rounded border-2 transition-colors ${
-                  simulateFallback 
-                    ? 'bg-violet-500 border-violet-500' 
-                    : providers.length < 2 
-                      ? 'border-zinc-200' 
-                      : 'border-zinc-300 group-hover:border-violet-400'
-                }`}>
-                  {simulateFallback && (
-                    <svg className="w-3 h-3 text-white absolute top-0.5 left-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                    </svg>
-                  )}
-                </div>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
-                </svg>
-                <span className="text-xs font-medium">Provider Fallback</span>
-                {providers.length >= 2 && (
-                  <span className="text-[10px] text-muted-foreground">
-                    ({providers[0]} → {providers[1]})
-                  </span>
-                )}
-              </div>
-            </label>
-            
-            {providers.length < 2 && (
-              <span className="text-[10px] text-muted-foreground italic">
-                Add 2+ providers to test fallback
-              </span>
-            )}
-          </div>
-        </div>
-        
         <form onSubmit={handleSubmit} className="flex gap-3 max-w-4xl mx-auto p-4">
           <input
             value={input}
