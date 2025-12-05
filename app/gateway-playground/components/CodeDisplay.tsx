@@ -4,16 +4,17 @@ import { useState } from 'react';
 
 interface CodeDisplayProps {
   selectedModel: string;
+  fallbackModel: string | null;
   providerOrder: string[];
   providerOnly: string[] | null;
 }
 
-export function CodeDisplay({ selectedModel, providerOrder, providerOnly }: CodeDisplayProps) {
+export function CodeDisplay({ selectedModel, fallbackModel, providerOrder, providerOnly }: CodeDisplayProps) {
   const [copied, setCopied] = useState(false);
   const [hoveredToken, setHoveredToken] = useState<string | null>(null);
 
   const generateCode = () => {
-    const hasProviderOptions = providerOrder.length > 0 || providerOnly !== null;
+    const hasProviderOptions = providerOrder.length > 0 || providerOnly !== null || fallbackModel;
     
     let providerOptionsCode = '';
     if (hasProviderOptions) {
@@ -30,10 +31,18 @@ export function CodeDisplay({ selectedModel, providerOrder, providerOnly }: Code
         order: [${providerOrder.map(p => `'${p}'`).join(', ')}],`;
       }
       
+      if (fallbackModel) {
+        providerOptionsCode += `
+        models: ['${fallbackModel}'],`;
+      }
+      
       providerOptionsCode += `
       },
     },`;
     }
+
+    // Always use single model (fallback handled via providerOptions)
+    const modelParam = `gateway('${selectedModel}')`;
 
     return `import { streamText } from 'ai';
 import { createGateway } from '@ai-sdk/gateway';
@@ -46,7 +55,7 @@ export async function POST(request: Request) {
   const { prompt } = await request.json();
 
   const result = streamText({
-    model: gateway('${selectedModel}'),
+    model: ${modelParam},
     prompt,${providerOptionsCode}
   });
 
@@ -93,6 +102,7 @@ export async function POST(request: Request) {
           <div className="absolute z-[100] left-0 bottom-full mb-2 w-[280px] p-4 bg-[#18181b] border border-[#27272a] rounded-lg shadow-2xl text-xs text-gray-300 leading-relaxed pointer-events-none animate-in fade-in zoom-in-95 duration-100 whitespace-normal">
             <div className="font-semibold text-white mb-2 border-b border-[#27272a] pb-2 text-sm">
               {interactiveId === 'model' && 'Model Selection'}
+              {interactiveId === 'models' && 'Fallback Models'}
               {interactiveId === 'order' && 'Provider Routing Order'}
               {interactiveId === 'only' && 'Provider Restriction'}
               {interactiveId === 'gateway' && 'AI Gateway Configuration'}
@@ -113,11 +123,11 @@ export async function POST(request: Request) {
       <div key={i} className="table-row hover:bg-white/[0.02] transition-colors">
         <span className="table-cell text-[#454545] select-none text-right pr-6 w-8 font-mono text-[13px]">{i + 1}</span>
         <span className="table-cell whitespace-pre font-mono text-[13px]">
-          {line.includes('import') ? (
+          {line.includes('import') && line.includes('streamText') ? (
             <>
               <Token type="keyword">import</Token> <Token type="punctuation">{'{'}</Token> <Token type="variable">streamText</Token> <Token type="punctuation">{'}'}</Token> <Token type="keyword">from</Token> <Token type="string">'ai'</Token><Token type="punctuation">;</Token>
             </>
-          ) : line.includes('createGateway') && line.includes('import') ? (
+          ) : line.includes('import') && line.includes('createGateway') ? (
             <>
               <Token type="keyword">import</Token> <Token type="punctuation">{'{'}</Token> <Token type="function">createGateway</Token> <Token type="punctuation">{'}'}</Token> <Token type="keyword">from</Token> <Token type="string">'@ai-sdk/gateway'</Token><Token type="punctuation">;</Token>
             </>
@@ -168,6 +178,10 @@ export async function POST(request: Request) {
               <Token type="property" interactiveId="order" tooltip="Sets the priority order for routing. The Gateway will attempt providers in this sequence, falling back to the next one if an error occurs.">        order</Token><Token type="punctuation">:</Token> <Token type="punctuation">[</Token>{providerOrder.map((p, i) => (
                 <span key={i}><Token type="string">'{p}'</Token>{i < providerOrder.length - 1 && <Token type="punctuation">, </Token>}</span>
               ))}<Token type="punctuation">],</Token>
+            </>
+          ) : line.includes('models:') ? (
+            <>
+              <Token type="property" interactiveId="models" tooltip="Specifies the fallback model(s) to use if the primary model fails. Enables seamless model-level failover.">        models</Token><Token type="punctuation">:</Token> <Token type="punctuation">[</Token><Token type="string">'{fallbackModel}'</Token><Token type="punctuation">],</Token>
             </>
           ) : line.includes('return result') ? (
             <>

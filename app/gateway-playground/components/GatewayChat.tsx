@@ -10,6 +10,7 @@ interface Model {
   name: string;
   description?: string;
   providers: string[];
+  isExample?: boolean; // Flag to indicate if this is an example model that can be used
   pricing?: {
     input: number;
     output: number;
@@ -33,6 +34,11 @@ export function GatewayChat() {
   const [fullProviderOrder, setFullProviderOrder] = useState<string[]>([]); // Full ordered list (for state restoration)
   const [providerOrder, setProviderOrder] = useState<string[]>([]); // Active providers only (for code generation)
   const [providerOnly, setProviderOnly] = useState<string[] | null>(null);
+  
+  // Model fallback configuration
+  const [fallbackModel, setFallbackModel] = useState<string | null>(null);
+  const [fallbackSearchQuery, setFallbackSearchQuery] = useState('');
+  const [isFallbackDropdownOpen, setIsFallbackDropdownOpen] = useState(false);
 
   useEffect(() => {
     fetchModels();
@@ -52,9 +58,10 @@ export function GatewayChat() {
       setModels(data.models);
       
       if (data.models.length > 0) {
-        const firstModel = data.models[0];
-        setSelectedModel(firstModel.id);
-        updateProvidersForModel(firstModel);
+        // Select the first example model by default
+        const firstExampleModel = data.models.find((m: Model) => m.isExample) || data.models[0];
+        setSelectedModel(firstExampleModel.id);
+        updateProvidersForModel(firstExampleModel);
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load models');
@@ -75,8 +82,17 @@ export function GatewayChat() {
   };
 
   const handleModelSelect = (model: Model) => {
+    // Only allow selecting example models
+    if (!model.isExample) {
+      return;
+    }
+    
     setSelectedModel(model.id);
     updateProvidersForModel(model);
+    // Reset fallback when primary model changes
+    setFallbackModel(null);
+    setFallbackSearchQuery('');
+    setIsFallbackDropdownOpen(false);
   };
 
   // Handler that receives the full order from ProviderManager
@@ -84,10 +100,18 @@ export function GatewayChat() {
     setFullProviderOrder(fullOrder);
   };
 
-  const filteredModels = models.filter(m => 
-    m.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    m.name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredModels = models
+    .filter(m => 
+      m.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      m.name.toLowerCase().includes(searchQuery.toLowerCase())
+    )
+    .sort((a, b) => {
+      // Sort example models first
+      if (a.isExample && !b.isExample) return -1;
+      if (!a.isExample && b.isExample) return 1;
+      // Then alphabetically
+      return a.id.localeCompare(b.id);
+    });
 
   return (
     <div className="flex h-screen bg-background font-sans text-foreground">
@@ -125,22 +149,28 @@ export function GatewayChat() {
           ) : error ? (
             <div className="p-4 text-center text-sm text-destructive">{error}</div>
           ) : (
-            filteredModels.map((model) => (
-              <button
-                key={model.id}
-                onClick={() => handleModelSelect(model)}
-                className={`w-full text-left px-3 py-2 rounded-md text-sm transition-colors flex items-center justify-between group ${
-                  selectedModel === model.id
-                    ? 'bg-primary text-primary-foreground'
-                    : 'hover:bg-muted text-muted-foreground hover:text-foreground'
-                }`}
-              >
-                <span className="truncate font-medium">{model.id}</span>
-                {selectedModel === model.id && (
-                  <span className="h-2 w-2 rounded-full bg-primary-foreground/50" />
-                )}
-              </button>
-            ))
+            filteredModels.map((model) => {
+              const isDisabled = !model.isExample;
+              return (
+                <button
+                  key={model.id}
+                  onClick={() => handleModelSelect(model)}
+                  disabled={isDisabled}
+                  className={`w-full text-left px-3 py-2 rounded-md text-sm transition-colors flex items-center justify-between group ${
+                    selectedModel === model.id
+                      ? 'bg-primary text-primary-foreground'
+                      : isDisabled
+                      ? 'text-muted-foreground/60 cursor-default'
+                      : 'hover:bg-muted text-muted-foreground hover:text-foreground'
+                  }`}
+                >
+                  <span className="truncate font-medium">{model.id}</span>
+                  {selectedModel === model.id && (
+                    <span className="h-2 w-2 rounded-full bg-primary-foreground/50" />
+                  )}
+                </button>
+              );
+            })
           )}
         </div>
       </div>
@@ -255,6 +285,130 @@ export function GatewayChat() {
                         </div>
                       )}
                     </div>
+
+                    {/* Model Fallback Configuration */}
+                    <div className="bg-background rounded-xl border shadow-sm p-5">
+                      <div className="flex items-center justify-between mb-3">
+                        <h3 className="text-sm font-semibold">Model Fallback</h3>
+                        {fallbackModel && (
+                          <button
+                            onClick={() => {
+                              setFallbackModel(null);
+                              setFallbackSearchQuery('');
+                              setIsFallbackDropdownOpen(false);
+                            }}
+                            className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+                          >
+                            Clear
+                          </button>
+                        )}
+                      </div>
+                      
+                      {fallbackModel ? (
+                        <div className="flex items-center justify-between p-3 rounded-lg border bg-muted/20">
+                          <div className="flex items-center gap-3">
+                            <div className="flex items-center justify-center w-8 h-8 rounded-full bg-secondary text-secondary-foreground text-xs font-semibold">
+                              2
+                            </div>
+                            <div>
+                              <div className="text-sm font-medium">{fallbackModel}</div>
+                              <div className="text-xs text-muted-foreground">
+                                Fallback model if primary fails
+                              </div>
+                            </div>
+                          </div>
+                          <svg 
+                            className="w-5 h-5 text-green-500"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                            strokeWidth={2}
+                          >
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                          </svg>
+                        </div>
+                      ) : (
+                        <div className="space-y-3">
+                          <p className="text-xs text-muted-foreground">
+                            Select a fallback model to use if the primary model fails
+                          </p>
+                          <div className="relative">
+                            <svg
+                              className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground pointer-events-none"
+                              xmlns="http://www.w3.org/2000/svg"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="2"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                            >
+                              <circle cx="11" cy="11" r="8" />
+                              <path d="m21 21-4.3-4.3" />
+                            </svg>
+                            <input
+                              type="text"
+                              placeholder="Search for fallback model..."
+                              value={fallbackSearchQuery}
+                              onChange={(e) => setFallbackSearchQuery(e.target.value)}
+                              onFocus={() => setIsFallbackDropdownOpen(true)}
+                              onBlur={() => setTimeout(() => setIsFallbackDropdownOpen(false), 200)}
+                              className="w-full rounded-md border bg-background pl-9 pr-3 py-2 text-sm outline-none focus:ring-1 focus:ring-ring"
+                            />
+                            
+                            {isFallbackDropdownOpen && (
+                              <div className="absolute z-10 w-full mt-1 max-h-60 overflow-y-auto border rounded-lg bg-background shadow-lg">
+                                {models
+                                  .filter(m => 
+                                    m.id !== selectedModel &&
+                                    m.isExample && // Only show example models as fallback options
+                                    (fallbackSearchQuery === '' || 
+                                     m.id.toLowerCase().includes(fallbackSearchQuery.toLowerCase()) ||
+                                     m.name.toLowerCase().includes(fallbackSearchQuery.toLowerCase()))
+                                  )
+                                  .slice(0, 10)
+                                  .map((model) => (
+                                    <button
+                                      key={model.id}
+                                      onClick={() => {
+                                        setFallbackModel(model.id);
+                                        setFallbackSearchQuery('');
+                                        setIsFallbackDropdownOpen(false);
+                                      }}
+                                      className="w-full text-left px-3 py-2.5 hover:bg-muted transition-colors border-b last:border-b-0 flex items-center justify-between group"
+                                    >
+                                      <div className="flex-1 min-w-0">
+                                        <div className="text-sm font-medium truncate">{model.id}</div>
+                                        <div className="text-xs text-muted-foreground truncate">{model.name}</div>
+                                      </div>
+                                      <svg 
+                                        className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0 ml-2"
+                                        fill="none"
+                                        viewBox="0 0 24 24"
+                                        stroke="currentColor"
+                                        strokeWidth={2}
+                                      >
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+                                      </svg>
+                                    </button>
+                                  ))}
+                                {models.filter(m => 
+                                  m.id !== selectedModel &&
+                                  m.isExample && // Only show example models as fallback options
+                                  (fallbackSearchQuery === '' || 
+                                   m.id.toLowerCase().includes(fallbackSearchQuery.toLowerCase()) ||
+                                   m.name.toLowerCase().includes(fallbackSearchQuery.toLowerCase()))
+                                ).length === 0 && (
+                                  <div className="p-4 text-center text-sm text-muted-foreground">
+                                    No models found
+                                  </div>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
               )}
@@ -262,6 +416,7 @@ export function GatewayChat() {
               {activeTab === 'code' && (
                 <CodeDisplay
                   selectedModel={selectedModel}
+                  fallbackModel={fallbackModel}
                   providerOrder={providerOrder}
                   providerOnly={providerOnly}
                 />
@@ -271,6 +426,7 @@ export function GatewayChat() {
                 <div className="h-full flex flex-col bg-background">
                   <ChatTab
                     selectedModel={selectedModel}
+                    fallbackModel={fallbackModel}
                     providerOrder={providerOrder}
                     providerOnly={providerOnly}
                   />
