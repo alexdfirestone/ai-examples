@@ -1670,6 +1670,10 @@ packages:
     resolution: {integrity: sha512-NUna+D5Kk0UMscKnnFVgHhV4SfuoiE9wFpF8E8RvxHYQv9NB2PRIkQp0eTvu2uVzExFB5eH2/lYPpxw/SrICzg==}
     engines: {node: '>= 20'}
 
+  '@vercel/oidc@3.0.5':
+    resolution: {integrity: sha512-fnYhv671l+eTTp48gB4zEsTW/YtRgRPnkI2nT7x6qw5rkI1Lq2hTmQIpHPgyThI0znLK+vX2n9XxKdXZ7BUbbw==}
+    engines: {node: '>= 20'}
+
   '@vercel/queue@0.0.0-alpha.23':
     resolution: {integrity: sha512-1JuRZ4U3nLUisu9sP++J9Y12/p1J1NDPcpDGBFJ+sjc7DfGZAqEzCIUypnC7ymbfkEFaVnSznmrBs8wkVeTMpQ==}
     engines: {node: '>=20.0.0'}
@@ -5563,13 +5567,15 @@ snapshots:
 
   '@vercel/oidc@3.0.4': {}
 
+  '@vercel/oidc@3.0.5': {}
+
   '@vercel/queue@0.0.0-alpha.23':
     dependencies:
       mixpart: 0.0.5-alpha.0
 
   '@vercel/queue@0.0.0-alpha.28':
     dependencies:
-      '@vercel/oidc': 3.0.3
+      '@vercel/oidc': 3.0.5
       mixpart: 0.0.5-alpha.1
 
   '@workflow/builders@4.0.1-beta.9(@aws-sdk/client-sts@3.930.0)(@opentelemetry/api@1.9.0)':
@@ -5758,7 +5764,7 @@ snapshots:
 
   '@workflow/world-vercel@4.0.1-beta.7':
     dependencies:
-      '@vercel/oidc': 3.0.3
+      '@vercel/oidc': 3.0.5
       '@vercel/queue': 0.0.0-alpha.28
       '@workflow/errors': 4.0.1-beta.4
       '@workflow/world': 4.0.1-beta.4(zod@4.1.11)

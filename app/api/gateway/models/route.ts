@@ -1,4 +1,4 @@
-import { gateway } from 'ai';
+import { gateway } from '@ai-sdk/gateway';
 import { NextResponse } from 'next/server';
 
 // All available providers in AI Gateway
@@ -36,30 +36,31 @@ type Provider =
 export async function GET() {
   try {
     const availableModels = await gateway.getAvailableModels();
+    console.log(availableModels);
     
-    // Mock provider data for specific models
-    const mockProviders: Record<string, Provider[]> = {
+    // Mock provider data for specific models (these are the example models users can interact with)
+    const exampleModels: Record<string, Provider[]> = {
       'openai/gpt-5': ['azure', 'openai'],
       'openai/gpt-oss-120b': ['parasail', 'groq', 'fireworks', 'cerebras', 'bedrock', 'baseten'],
     };
     
-    // Only include models that have mock provider data
-    const models = availableModels.models
-      .filter(model => mockProviders[model.id])
-      .map(model => {
-        return {
-          id: model.id,
-          name: model.name,
-          description: model.description,
-          providers: mockProviders[model.id],
-          pricing: model.pricing ? {
-            input: model.pricing.input,
-            output: model.pricing.output,
-            cachedInputTokens: model.pricing.cachedInputTokens,
-            cacheCreationInputTokens: model.pricing.cacheCreationInputTokens,
-          } : null,
-        };
-      });
+    // Return ALL models, but mark which ones are examples (enabled)
+    const models = availableModels.models.map(model => {
+      const isExample = model.id in exampleModels;
+      return {
+        id: model.id,
+        name: model.name,
+        description: model.description,
+        providers: isExample ? exampleModels[model.id] : [],
+        isExample, // Flag to indicate if this is an example model
+        pricing: model.pricing ? {
+          input: model.pricing.input,
+          output: model.pricing.output,
+          cachedInputTokens: model.pricing.cachedInputTokens,
+          cacheCreationInputTokens: model.pricing.cacheCreationInputTokens,
+        } : null,
+      };
+    });
     
     return NextResponse.json({
       models,

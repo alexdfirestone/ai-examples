@@ -1,6 +1,6 @@
 import { GatewayChat } from './components/GatewayChat';
 
-export default function GatewayWizardPage() {
+export default function GatewayPlaygroundPage() {
   return <GatewayChat />;
 }
 

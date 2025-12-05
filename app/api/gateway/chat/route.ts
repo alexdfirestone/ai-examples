@@ -11,10 +11,18 @@ export async function POST(req: Request) {
 
     const modelMessages = convertToModelMessages(messages);
 
-    console.log(providerOptions);
+    console.log('Model ID:', modelId);
+    console.log('Provider Options:', providerOptions);
+
+    // Handle model - use the first model ID if array is provided
+    // The gateway provider handles fallback via providerOptions.gateway
+    const primaryModelId = Array.isArray(modelId) ? modelId[0] : modelId;
+    const model = gateway(primaryModelId);
+
+    console.log('Processed model:', model);
 
     const result = streamText({
-      model: gateway(modelId),
+      model: model,
       messages: modelMessages,
       providerOptions,
     });
