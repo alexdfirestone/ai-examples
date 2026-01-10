@@ -1,0 +1,41 @@
+ACME CORPORATION - Q4 2025 METRICS
+===================================
+
+Revenue Summary
+---------------
+- Total Revenue: $4.2M (up 23% YoY)
+- Recurring Revenue: $3.1M (74% of total)
+- New Contracts: $890K
+- Expansion Revenue: $210K
+
+Customer Metrics
+----------------
+- Total Customers: 342
+- Enterprise Accounts: 28
+- Mid-Market: 156
+- SMB: 158
+- Net Revenue Retention: 118%
+- Logo Churn: 2.1%
+
+Product Usage
+-------------
+- Monthly Active Users: 12,847
+- Daily Active Users: 4,231
+- Average Session Duration: 18 minutes
+- Feature Adoption Rate: 67%
+
+Top Performing Regions
+----------------------
+1. North America: $2.4M (57%)
+2. Europe: $1.2M (29%)
+3. Asia Pacific: $420K (10%)
+4. Latin America: $180K (4%)
+
+Key Initiatives Status
+----------------------
+- Product Launch v3.0: ON TRACK (Feb 2026)
+- Enterprise Security Cert: COMPLETED
+- Mobile App Beta: DELAYED (was Dec, now Mar)
+- Partner Program: IN PROGRESS (40% complete)
+
+
