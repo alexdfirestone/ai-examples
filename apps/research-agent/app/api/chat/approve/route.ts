@@ -1,17 +1,15 @@
-import { resumeWebhook } from "workflow/api";
+import { outlineApprovalHook } from "@/workflows/research/tools";
 
 export async function POST(req: Request) {
-  const url = new URL(req.url);
-  const token = url.searchParams.get("token");
+  const { toolCallId, approved } = await req.json();
 
-  if (!token) {
-    return Response.json({ error: "Missing token" }, { status: 400 });
+  if (!toolCallId) {
+    return Response.json({ error: "Missing toolCallId" }, { status: 400 });
   }
 
-  const body = await req.json();
-
-  // Resume the webhook to continue the workflow
-  await resumeWebhook(token, body);
+  // Resume the hook to continue the workflow
+  // Schema validation happens automatically via the defineHook schema
+  await outlineApprovalHook.resume(toolCallId, { approved });
 
   return Response.json({ success: true });
 }

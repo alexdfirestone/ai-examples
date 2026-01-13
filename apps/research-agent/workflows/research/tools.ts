@@ -1,9 +1,16 @@
 import { z } from "zod";
-import { getWritable } from "workflow";
+import { getWritable, defineHook } from "workflow";
 import type { CustomDataPart } from "./types";
 
 // Helper for delays within step context (sleep from workflow only works at workflow level)
 const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+// Define the approval hook with typed schema
+export const outlineApprovalHook = defineHook({
+  schema: z.object({
+    approved: z.boolean(),
+  }),
+});
 
 // Tool to research a topic (simulates web search with streaming progress)
 export async function researchTopic(
@@ -192,6 +199,37 @@ The data suggests that stakeholders should pay close attention to these trends a
   }
 }
 
+// Tool that requests approval - uses hook to pause workflow
+// Note: No "use step" here - hooks are workflow-level primitives
+async function executeRequestOutlineApproval(
+  {
+    outlineTitle,
+    sectionCount,
+  }: {
+    outlineTitle: string;
+    sectionCount: number;
+  },
+  { toolCallId }: { toolCallId: string }
+) {
+  // Use the toolCallId as the hook token so the UI can reference it
+  const hook = outlineApprovalHook.create({ token: toolCallId });
+
+  // Workflow pauses here until the hook is resolved
+  const { approved } = await hook;
+
+  if (!approved) {
+    return {
+      approved: false,
+      message: "Outline was rejected. Please provide feedback on what you'd like changed.",
+    };
+  }
+
+  return {
+    approved: true,
+    message: `Outline "${outlineTitle}" with ${sectionCount} sections has been approved. Proceed with generating all sections.`,
+  };
+}
+
 // Tool to finalize the complete report
 export async function finalizeReport(
   {
@@ -277,6 +315,11 @@ const finalizeReportSchema = z.object({
     .describe("All report sections"),
 });
 
+const requestOutlineApprovalSchema = z.object({
+  outlineTitle: z.string().describe("Title of the outline being approved"),
+  sectionCount: z.number().describe("Number of sections in the outline"),
+});
+
 // Export tools with both inputSchema (runtime) and parameters (TypeScript types)
 export const tools = {
   researchTopic: {
@@ -293,8 +336,16 @@ export const tools = {
     parameters: generateOutlineSchema,
     execute: generateOutline,
   },
+  requestOutlineApproval: {
+    description:
+      "Request human approval for the outline before proceeding. MUST be called after generateOutline and before generating any sections. The workflow will pause until the human approves or rejects.",
+    inputSchema: requestOutlineApprovalSchema,
+    parameters: requestOutlineApprovalSchema,
+    execute: executeRequestOutlineApproval,
+  },
   generateSection: {
-    description: "Generate content for a specific section of the report.",
+    description:
+      "Generate content for a specific section of the report. Only use after outline is approved via requestOutlineApproval.",
     inputSchema: generateSectionSchema,
     parameters: generateSectionSchema,
     execute: generateSection,
