@@ -2,7 +2,7 @@
 
 import { useChat } from "@ai-sdk/react";
 import { WorkflowChatTransport } from "@workflow/ai";
-import { useMemo, useState } from "react";
+import { useMemo, useState, useRef, useEffect } from "react";
 import { DataPartRenderer } from "./components/DataPartRenderer";
 import { MessagesDebug } from "./components/MessagesDebug";
 import { Message, MessageContent, MessageResponse } from "@/components/ai-elements/message";
@@ -112,6 +112,16 @@ function OutlineApprovalCard({
 export default function ResearchAgentPage() {
   const [input, setInput] = useState("");
   const [showDebug, setShowDebug] = useState(false);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  // Auto-resize textarea as content changes
+  useEffect(() => {
+    const textarea = textareaRef.current;
+    if (textarea) {
+      textarea.style.height = 'auto';
+      textarea.style.height = Math.min(textarea.scrollHeight, 200) + 'px';
+    }
+  }, [input]);
 
   const activeRunId = useMemo(() => {
     if (typeof window === "undefined") return;
@@ -174,6 +184,19 @@ export default function ResearchAgentPage() {
     if (input.trim() && status === "ready") {
       sendMessage({ text: input });
       setInput("");
+      // Reset textarea height
+      if (textareaRef.current) {
+        textareaRef.current.style.height = 'auto';
+      }
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      if (status === 'ready' && input.trim()) {
+        handleSubmit(e as unknown as React.FormEvent);
+      }
     }
   };
 
@@ -204,6 +227,37 @@ export default function ResearchAgentPage() {
     );
   }, [messages]);
 
+  const hasMessages = messages.length > 0;
+
+  // Input component (shared between empty and chat states)
+  const inputComponent = (
+    <form onSubmit={handleSubmit} className="w-full">
+      <div className="relative bg-white border border-[#e3e3e1] rounded-2xl shadow-sm hover:border-[#d0d0d0] focus-within:border-[#37352f]/30 focus-within:shadow-md transition-all">
+        <textarea
+          ref={textareaRef}
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          onKeyDown={handleKeyDown}
+          placeholder="Enter a research topic..."
+          disabled={isWorking}
+          rows={1}
+          className="w-full px-4 py-3.5 pr-12 text-[15px] text-[#37352f] placeholder-[#9b9a97] bg-transparent border-none rounded-2xl focus:outline-none resize-none max-h-[160px] overflow-auto disabled:opacity-50"
+        />
+        
+        <button
+          type="submit"
+          disabled={isWorking || !input.trim()}
+          className="absolute bottom-2.5 right-2.5 w-8 h-8 flex items-center justify-center rounded-full transition-all disabled:bg-transparent disabled:text-[#d0d0d0] disabled:cursor-default bg-[#37352f] text-white hover:bg-[#1a1a1a]"
+          title="Send"
+        >
+          <svg width="16" height="16" viewBox="0 0 20 20" fill="none">
+            <path d="M10 4L10 16M10 4L6 8M10 4L14 8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+        </button>
+      </div>
+    </form>
+  );
+
   return (
     <div className="min-h-screen bg-white">
       {/* Debug Panel */}
@@ -224,43 +278,75 @@ export default function ResearchAgentPage() {
         </div>
       )}
 
-      {/* Main Content */}
-      <div className="max-w-[720px] mx-auto px-6 py-12">
-        {/* Header */}
-        <div className="mb-12">
-          <div className="flex items-center justify-between mb-1">
-            <h1 className="text-[32px] font-bold text-[#37352f] tracking-tight">
+      {/* Debug toggle - always visible in corner */}
+      {!showDebug && (
+        <button
+          onClick={() => setShowDebug(true)}
+          className="fixed top-4 right-4 px-2.5 py-1 text-[11px] font-medium text-[#9b9a97] hover:text-[#37352f] hover:bg-[#f7f6f3] rounded transition-colors z-40"
+        >
+          Debug
+        </button>
+      )}
+
+      {/* Empty State - Centered like ChatGPT */}
+      {!hasMessages && (
+        <div className="min-h-screen flex flex-col items-center justify-center px-6 pb-32">
+          <div className="w-full max-w-[640px] flex flex-col items-center">
+            {/* Title */}
+            <h1 className="text-[28px] font-semibold text-[#37352f] mb-8 text-center">
               Research Agent
             </h1>
-            <div className="flex items-center gap-2">
-              {(activeRunId || messages.length > 0) && (
+
+            {/* Input */}
+            <div className="w-full mb-4">
+              {inputComponent}
+            </div>
+
+            {/* Example topics */}
+            <div className="flex items-center justify-center gap-2 flex-wrap">
+              {["AI in Healthcare", "Sustainable Energy", "Future of Work"].map((topic) => (
                 <button
-                  onClick={handleReset}
-                  className="px-2 py-1 text-[11px] font-medium text-[#eb5757] hover:bg-[#eb5757]/10 rounded transition-colors"
+                  key={topic}
+                  type="button"
+                  onClick={() => setInput(topic)}
+                  className="px-3 py-1.5 text-[13px] text-[#37352f]/70 border border-[#e3e3e1] hover:bg-[#f7f6f3] hover:border-[#d0d0d0] rounded-full transition-all"
                 >
-                  Reset
+                  {topic}
                 </button>
-              )}
+              ))}
+            </div>
+
+            {/* Subtitle */}
+            <p className="mt-8 text-[13px] text-[#9b9a97] text-center">
+              AI-powered research with human-in-the-loop approval
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Chat State - Traditional layout */}
+      {hasMessages && (
+        <div className="min-h-screen flex flex-col">
+          {/* Header */}
+          <div className="sticky top-0 z-30 bg-white/80 backdrop-blur-sm border-b border-[#e3e3e1]/50">
+            <div className="max-w-[720px] mx-auto px-6 py-3 flex items-center justify-between">
+              <h1 className="text-[15px] font-semibold text-[#37352f]">
+                Research Agent
+              </h1>
               <button
-                onClick={() => setShowDebug(!showDebug)}
-                className={`px-2 py-1 text-[11px] font-medium rounded transition-colors ${
-                  showDebug
-                    ? "bg-[#37352f] text-white"
-                    : "text-[#9b9a97] hover:bg-[#37352f]/5"
-                }`}
+                onClick={handleReset}
+                className="px-2.5 py-1 text-[12px] font-medium text-[#37352f]/60 hover:text-[#eb5757] hover:bg-[#eb5757]/5 rounded transition-colors"
               >
-                Debug
+                New research
               </button>
             </div>
           </div>
-          <p className="text-[14px] text-[#37352f]/50">
-            Durable AI workflow with human-in-the-loop approval
-          </p>
-        </div>
 
-        {/* Messages */}
-        <div className="space-y-6 mb-8">
-          {messages.map((message) => (
+          {/* Messages */}
+          <div className="flex-1 overflow-auto">
+            <div className="max-w-[720px] mx-auto px-6 py-8">
+              <div className="space-y-6">
+                {messages.map((message) => (
             <div key={message.id} className={`flex items-start gap-3 ${message.role === "user" ? "flex-row-reverse" : ""}`}>
               {/* Avatar */}
               {message.role === "user" ? (
@@ -372,63 +458,34 @@ export default function ResearchAgentPage() {
             </div>
           ))}
 
-          {/* Working indicator - don't show while waiting for approval or when data parts show their own loading */}
-          {isWorking && !hasPendingApproval && !hasActiveDataPartLoading && (
-            <div className="flex items-center gap-2 text-[13px] text-[#37352f]/50">
-              <svg className="w-3.5 h-3.5 animate-spin" viewBox="0 0 24 24" fill="none">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/>
-              </svg>
-              <span>Working...</span>
-            </div>
-          )}
+                {/* Working indicator - don't show while waiting for approval or when data parts show their own loading */}
+                {isWorking && !hasPendingApproval && !hasActiveDataPartLoading && (
+                  <div className="flex items-center gap-2 text-[13px] text-[#37352f]/50">
+                    <svg className="w-3.5 h-3.5 animate-spin" viewBox="0 0 24 24" fill="none">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/>
+                    </svg>
+                    <span>Working...</span>
+                  </div>
+                )}
 
-          {error && (
-            <div className="py-2 px-3 text-[13px] text-[#eb5757] bg-[#eb5757]/5 rounded border border-[#eb5757]/20">
-              {error.message}
+                {error && (
+                  <div className="py-2 px-3 text-[13px] text-[#eb5757] bg-[#eb5757]/5 rounded border border-[#eb5757]/20">
+                    {error.message}
+                  </div>
+                )}
+              </div>
             </div>
-          )}
+          </div>
+
+          {/* Input - sticky at bottom */}
+          <div className="sticky bottom-0 bg-gradient-to-t from-white via-white to-white/0 pt-6 pb-6">
+            <div className="max-w-[720px] mx-auto px-6">
+              {inputComponent}
+            </div>
+          </div>
         </div>
-
-        {/* Input */}
-        <div className="sticky bottom-6">
-          <form onSubmit={handleSubmit}>
-            <div className="relative">
-              <input
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                placeholder="Enter a research topic..."
-                disabled={isWorking}
-                className="w-full px-4 py-3 text-[14px] text-[#37352f] placeholder-[#9b9a97] bg-white border border-[#e3e3e1] rounded-lg focus:outline-none focus:border-[#2eaadc] focus:ring-1 focus:ring-[#2eaadc]/20 disabled:opacity-50 transition-colors"
-              />
-              <button
-                type="submit"
-                disabled={isWorking || !input.trim()}
-                className="absolute right-2 top-1/2 -translate-y-1/2 px-3 py-1.5 text-[13px] font-medium text-white bg-[#37352f] hover:bg-[#37352f]/90 disabled:bg-[#37352f]/30 rounded transition-colors"
-              >
-                {isWorking ? "..." : "Send"}
-              </button>
-            </div>
-          </form>
-
-          {/* Example topics */}
-          {messages.length === 0 && (
-            <div className="mt-4 flex items-center gap-2 flex-wrap">
-              <span className="text-[12px] text-[#9b9a97]">Try:</span>
-              {["AI in Healthcare", "Sustainable Energy", "Future of Work"].map((topic) => (
-                <button
-                  key={topic}
-                  type="button"
-                  onClick={() => setInput(topic)}
-                  className="px-2 py-1 text-[12px] text-[#37352f]/70 hover:bg-[#37352f]/5 rounded transition-colors"
-                >
-                  {topic}
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-      </div>
+      )}
     </div>
   );
 }
