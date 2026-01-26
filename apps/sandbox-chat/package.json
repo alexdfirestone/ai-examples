@@ -1,16 +1,14 @@
 {
-  "name": "ai-examples-monorepo",
+  "name": "@ai-examples/sandbox-chat",
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "next dev --port 3004",
     "build": "next build",
     "start": "next start",
     "lint": "eslint"
   },
   "dependencies": {
-    "@ai-sdk/gateway": "^2.0.18",
-    "@ai-sdk/google": "^2.0.28",
     "@ai-sdk/openai": "3.0.0-beta.55",
     "@ai-sdk/react": "3.0.0-beta.94",
     "@langfuse/otel": "^4.4.2",
@@ -19,25 +17,26 @@
     "@opentelemetry/sdk-node": "^0.208.0",
     "@opentelemetry/sdk-trace-node": "^2.2.0",
     "@radix-ui/react-slot": "^1.2.4",
-    "@vercel/blob": "^2.0.0",
+    "@vercel/sandbox": "^1.1.2",
     "ai": "6.0.0-beta.94",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
-    "gateway": "^1.0.0",
     "lucide-react": "^0.554.0",
-    "next": "16.0.10",
-    "react": "19.2.0",
-    "react-dom": "19.2.0",
+    "next": "16.0.7",
+    "react": "19.2.1",
+    "react-dom": "19.2.1",
     "react-resizable-panels": "^3.0.6",
     "tailwind-merge": "^3.4.0",
-    "workflow": "4.0.1-beta.13",
     "zod": "^3.23.8"
   },
   "devDependencies": {
-    "turbo": "^2.3.3"
-  },
-  "packageManager": "pnpm@9.15.0",
-  "engines": {
-    "node": ">=18"
+    "@tailwindcss/postcss": "^4",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "eslint": "^9",
+    "eslint-config-next": "16.0.1",
+    "tailwindcss": "^4",
+    "typescript": "^5"
   }
 }

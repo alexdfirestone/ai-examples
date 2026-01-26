@@ -1,0 +1,45 @@
+WEEKLY LEADERSHIP SYNC - January 3, 2026
+=========================================
+
+Attendees: Sarah (CEO), Mike (CTO), Lisa (VP Sales), Tom (VP Product)
+
+AGENDA ITEMS
+------------
+
+1. Q4 Review & Q1 Planning
+   - Sarah: Q4 exceeded targets by 8%. Board is pleased.
+   - Focus for Q1: Enterprise expansion and product stability
+   - ACTION: Lisa to present enterprise pipeline next week
+
+2. Engineering Update
+   - Mike: Completed migration to new infrastructure
+   - Performance improved 40% across all services
+   - Hiring: 3 senior engineers starting in January
+   - CONCERN: Technical debt in payment module needs addressing
+
+3. Product Roadmap
+   - Tom: v3.0 feature freeze scheduled for Jan 15
+   - Customer feedback: Top requests are:
+     * Real-time collaboration (HIGH)
+     * Mobile offline mode (MEDIUM)
+     * API rate limit increases (MEDIUM)
+   - Deprioritized: Advanced analytics dashboard (moved to Q2)
+
+4. Sales Pipeline
+   - Lisa: $1.8M in qualified pipeline for Q1
+   - 3 enterprise deals expected to close in January
+   - New vertical: Healthcare showing strong interest
+   - Challenge: Longer sales cycles in government sector
+
+DECISIONS MADE
+--------------
+- Approved: 2 additional headcount for customer success
+- Approved: Budget for SOC 2 Type II audit
+- Deferred: Office expansion discussion to February
+
+NEXT MEETING: January 10, 2026 at 9:00 AM
+
+
+
+
+
