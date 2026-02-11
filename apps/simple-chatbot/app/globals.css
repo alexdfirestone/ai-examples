@@ -1,0 +1,58 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  font-family: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI",
+    Helvetica, Arial, sans-serif;
+}
+
+/* Streamdown markdown styles */
+.streamdown {
+  @apply text-sm leading-relaxed;
+}
+
+.streamdown h1 {
+  @apply text-2xl font-semibold mt-6 mb-2;
+}
+
+.streamdown h2 {
+  @apply text-xl font-semibold mt-5 mb-2;
+}
+
+.streamdown h3 {
+  @apply text-base font-semibold mt-4 mb-2;
+}
+
+.streamdown p {
+  @apply my-2;
+}
+
+.streamdown ul,
+.streamdown ol {
+  @apply my-2 pl-6;
+}
+
+.streamdown li {
+  @apply my-1;
+}
+
+.streamdown code {
+  @apply text-[13px] bg-gray-100 px-1 py-0.5 rounded;
+}
+
+.streamdown pre {
+  @apply my-3 p-3 bg-gray-100 rounded-md overflow-x-auto;
+}
+
+.streamdown pre code {
+  @apply bg-transparent p-0;
+}
+
+.streamdown blockquote {
+  @apply border-l-2 border-gray-200 pl-4 my-3 text-gray-500;
+}
+
+.streamdown strong {
+  @apply font-semibold;
+}
